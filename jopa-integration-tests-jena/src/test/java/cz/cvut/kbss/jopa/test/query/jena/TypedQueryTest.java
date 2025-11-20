@@ -49,7 +49,6 @@ public class TypedQueryTest extends TypedQueryRunner {
         properties.put(JenaOntoDriverProperties.JENA_STORAGE_TYPE, JenaOntoDriverProperties.IN_MEMORY);
         properties.put(JenaOntoDriverProperties.JENA_TREAT_DEFAULT_GRAPH_AS_UNION, Boolean.toString(true));
         properties.put(JenaOntoDriverProperties.JENA_ISOLATION_STRATEGY, JenaOntoDriverProperties.SNAPSHOT);
-        properties.put(JOPAExperimentalProperties.QUERY_ENABLE_ENTITY_LOADING_OPTIMIZER, "true");
         em = persistenceFactory.getEntityManager("SPARQLTypedQueryTests", false, properties);
         QueryTestEnvironment.generateTestData(em);
         em.clear();

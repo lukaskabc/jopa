@@ -18,6 +18,7 @@
 package cz.cvut.kbss.jopa.model;
 
 import cz.cvut.kbss.jopa.environment.OWLClassA;
+import cz.cvut.kbss.jopa.environment.Vocabulary;
 import cz.cvut.kbss.jopa.environment.utils.Generators;
 import cz.cvut.kbss.jopa.exceptions.NoResultException;
 import cz.cvut.kbss.jopa.exceptions.NoUniqueResultException;
@@ -26,8 +27,10 @@ import cz.cvut.kbss.jopa.model.descriptors.Descriptor;
 import cz.cvut.kbss.jopa.model.descriptors.EntityDescriptor;
 import cz.cvut.kbss.jopa.model.query.Query;
 import cz.cvut.kbss.jopa.model.query.TypedQuery;
+import cz.cvut.kbss.jopa.query.QueryHints;
 import cz.cvut.kbss.jopa.query.QueryParameter;
 import cz.cvut.kbss.jopa.query.parameter.ParameterValueFactory;
+import cz.cvut.kbss.jopa.vocabulary.RDF;
 import cz.cvut.kbss.ontodriver.exception.OntoDriverException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
@@ -183,7 +187,7 @@ class TypedQueryImplTest extends QueryTestBase {
                 DELETE { ?inst ?property ?origValue . }
                 INSERT { ?inst ?property ?newValue . }
                 WHERE { ?inst ?property ?origValue . }""";
-        final TypedQueryImpl q = createQuery(update);
+        final TypedQueryImpl<?> q = createQuery(update);
         q.executeUpdate();
         verify(statementMock).executeUpdate(update);
     }
@@ -435,5 +439,23 @@ class TypedQueryImplTest extends QueryTestBase {
         } finally {
             verify(statementMock).close();
         }
+    }
+
+    @Test
+    void optimizeEntityResultLoadingHintAppliesEntityLoadingOptimizer() throws Exception {
+        final OWLClassA entity = Generators.generateOwlClassAInstance();
+        final TypedQuery<OWLClassA> query = create(SELECT_QUERY, OWLClassA.class);
+        query.setHint(QueryHints.ENABLE_ENTITY_LOADING_OPTIMIZER, true);
+        when(resultSetMock.iterator()).thenReturn(resultSetIterator);
+        when(resultSetIterator.hasNext()).thenReturn(true, false);
+        when(resultSetIterator.next()).thenReturn(resultRow);
+        when(resultRow.getObject(0, URI.class)).thenReturn(entity.getUri());
+        when(resultRow.getObject(1, URI.class)).thenReturn(URI.create(RDF.TYPE));
+        when(resultRow.getObject(2)).thenReturn(URI.create(Vocabulary.c_OwlClassA));
+        when(resultRow.getColumnCount()).thenReturn(3);
+        when(uowMock.readObjectFromAxioms(eq(OWLClassA.class), anyCollection(), any())).thenReturn(entity);
+        final List<OWLClassA> res = query.getResultList();
+        assertEquals(List.of(entity), res);
+        verify(uowMock, never()).readObject(eq(OWLClassA.class), eq(entity.getUri()), any());
     }
 }

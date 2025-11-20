@@ -1,7 +1,6 @@
 package cz.cvut.kbss.jopa.query.sparql;
 
 import cz.cvut.kbss.jopa.model.BaseEntityQueryResultLoader;
-import cz.cvut.kbss.jopa.model.JOPAExperimentalProperties;
 import cz.cvut.kbss.jopa.model.NonEntityQueryResultLoader;
 import cz.cvut.kbss.jopa.model.QueryResultLoader;
 import cz.cvut.kbss.jopa.model.descriptors.Descriptor;
@@ -26,7 +25,6 @@ public class SparqlQueryResultLoadingOptimizer extends QueryResultLoadingOptimiz
 
     @Override
     public void optimizeQueryAssembly(Class<?> resultClass) {
-        this.enableOptimization();
         if (canOptimize(resultClass)) {
             LOG.trace("Processing query results with optimized entity loading.");
             queryHolder.setAssemblyModifier(new EntityLoadingSparqlAssemblyModifier());
@@ -35,8 +33,7 @@ public class SparqlQueryResultLoadingOptimizer extends QueryResultLoadingOptimiz
 
     private boolean canOptimize(Class<?> resultClass) {
         return optimizationEnabled && queryHolder.getQueryType() == QueryType.SELECT
-                && projectsEntity(resultClass) && limitOrOffsetNotSet() && queryDoesNotContainGraphOrServiceClause()
-                && uow.getConfiguration().is(JOPAExperimentalProperties.QUERY_ENABLE_ENTITY_LOADING_OPTIMIZER);
+                && projectsEntity(resultClass) && limitOrOffsetNotSet() && queryDoesNotContainGraphOrServiceClause();
     }
 
     private boolean projectsEntity(Class<?> resultClass) {
