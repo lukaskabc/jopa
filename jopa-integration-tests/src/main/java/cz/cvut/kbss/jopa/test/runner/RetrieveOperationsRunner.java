@@ -659,7 +659,6 @@ public abstract class RetrieveOperationsRunner extends BaseRunner {
     }
 
 
-
     @Test
     void testSupportForUrnIrisInClassAndProperty() {
         this.em = getEntityManager("testSupportForUrnIrisInClassAndProperty", false);
@@ -757,5 +756,29 @@ public abstract class RetrieveOperationsRunner extends BaseRunner {
 
         final OWLClassAA result = findRequired(OWLClassAA.class, entityAA.getUri());
         assertEquals(1234.697D, result.getDynamicProperty());
+    }
+
+    @Test
+    void retrieveSimpleLiteralToAnnotationPropertyObjectFieldLoadsString() {
+        this.em = getEntityManager("retrieveSimpleLiteralToAnnotationPropertyObjectFieldLoadsString", false);
+        final String value = "annotationPropertyLiteral";
+        testLoadingAnnotationPropertyToObjectField(value);
+    }
+
+    private void testLoadingAnnotationPropertyToObjectField(Object value) {
+        transactionalThrowing(() -> persistTestData(List.of(
+                new Quad(URI.create(entityM.getKey()), URI.create(RDF.TYPE), URI.create(Vocabulary.C_OWL_CLASS_M)),
+                new Quad(URI.create(entityM.getKey()), URI.create(Vocabulary.p_m_objectAnnotationProperty),
+                        value, (String) null)), em));
+
+        final OWLClassM result = findRequired(OWLClassM.class, entityM.getKey());
+        assertEquals(value, result.getObjectAnnotation());
+    }
+
+    @Test
+    void retrieveResourceToAnnotationPropertyObjectFieldLoadsUri() {
+        this.em = getEntityManager("retrieveResourceToAnnotationPropertyObjectFieldLoadsUri", false);
+        final URI value = Generators.generateUri();
+        testLoadingAnnotationPropertyToObjectField(value);
     }
 }
