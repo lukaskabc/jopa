@@ -66,10 +66,6 @@ class SoqlAttribute extends SoqlParameter {
         this.operator = operator;
     }
 
-    public FilterableExpression getOperator() {
-        return operator;
-    }
-
     public boolean isOrderBy() {
         return isOrderBy;
     }
