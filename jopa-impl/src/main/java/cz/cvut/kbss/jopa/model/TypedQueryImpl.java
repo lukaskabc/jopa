@@ -23,8 +23,9 @@ import cz.cvut.kbss.jopa.model.descriptors.Descriptor;
 import cz.cvut.kbss.jopa.model.descriptors.EntityDescriptor;
 import cz.cvut.kbss.jopa.model.query.Parameter;
 import cz.cvut.kbss.jopa.model.query.TypedQuery;
+import cz.cvut.kbss.jopa.query.QueryHints;
 import cz.cvut.kbss.jopa.query.QueryHolder;
-import cz.cvut.kbss.jopa.query.sparql.QueryResultLoadingOptimizer;
+import cz.cvut.kbss.jopa.query.sparql.loader.QueryResultLoadingOptimizer;
 import cz.cvut.kbss.jopa.sessions.ConnectionWrapper;
 import cz.cvut.kbss.ontodriver.exception.OntoDriverException;
 
@@ -64,7 +65,7 @@ public class TypedQueryImpl<X> extends AbstractQuery implements TypedQuery<X> {
 
     private List<X> getResultListImpl() throws OntoDriverException {
         final List<X> res = new ArrayList<>();
-        queryResultLoadingOptimizer.optimizeQueryAssembly(resultType);
+        queryResultLoadingOptimizer.optimizeQueryAssembly(resultType, descriptor);
         final QueryResultLoader<X> resultLoader = queryResultLoadingOptimizer.getQueryResultLoader(resultType, descriptor);
 
         executeQuery(rr -> resultLoader.loadResult(rr).ifPresent(res::add));
@@ -101,7 +102,7 @@ public class TypedQueryImpl<X> extends AbstractQuery implements TypedQuery<X> {
 
     @Override
     public Stream<X> getResultStream() {
-        queryResultLoadingOptimizer.optimizeQueryAssembly(resultType);
+        queryResultLoadingOptimizer.optimizeQueryAssembly(resultType, descriptor);
         final QueryResultLoader<X> resultLoader = queryResultLoadingOptimizer.getQueryResultLoader(resultType, descriptor);
         try {
             return executeQueryForStream(resultLoader);
@@ -189,6 +190,15 @@ public class TypedQueryImpl<X> extends AbstractQuery implements TypedQuery<X> {
     @Override
     public TypedQuery<X> setHint(String hintName, Object value) {
         super.setHint(hintName, value);
+        if (QueryHints.ENABLE_ENTITY_LOADING_OPTIMIZER.equals(hintName)) {
+            QueryHintsHandler.Hint.getHint(hintName).ifPresent(h -> {
+                if ((Boolean) h.getValueToApply(value)) {
+                    queryResultLoadingOptimizer.enableOptimization();
+                } else {
+                    queryResultLoadingOptimizer.disableOptimization();
+                }
+            });
+        }
         return this;
     }
 

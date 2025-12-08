@@ -30,12 +30,12 @@ public interface PersistenceProvider {
     /**
      * Called by Persistence class when an EntityManagerFactory is to be created.
      *
-     * @param emName the name of the persistence unit
+     * @param puName the name of the persistence unit
      * @param map    a Map of properties for use by the persistence provider. These properties specify storage
      *               connection configuration and may also specify additional configuration.
      * @return EntityManagerFactory for the persistence unit, or null if the provider is not the right provider.
      */
-    EntityManagerFactory createEntityManagerFactory(String emName, Map<String, String> map);
+    EntityManagerFactory createEntityManagerFactory(String puName, Map<String, String> map);
 
     /**
      * Return the utility interface implemented by the persistence provider.

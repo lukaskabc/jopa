@@ -742,4 +742,28 @@ public abstract class CreateOperationsRunner extends BaseRunner {
                 new Quad(entityAA.getUri(), URI.create(Vocabulary.P_AA_DYNAMIC_ATTRIBUTE),
                         entityAA.getDynamicProperty(), (String) null)), em);
     }
+
+    @Test
+    void persistSupportsSimpleLiteralAnnotationPropertiesWithFieldOfTypeObject() throws Exception {
+        // Verifies that literal values of annotation property attributes (field type object) are persisted as simple literals
+        this.em = getEntityManager("persistSupportsSimpleLiteralAnnotationPropertiesWithFieldOfTypeObject", false);
+        entityM.setObjectAnnotation("objectAnnotationValue");
+        persist(entityM);
+
+        verifyStatementsPresent(List.of(
+                new Quad(URI.create(entityM.getKey()), URI.create(Vocabulary.p_m_objectAnnotationProperty),
+                        entityM.getObjectAnnotation(), (String) null)), em);
+    }
+
+    @Test
+    void persistSupportsResourceAnnotationPropertiesWithFieldOfTypeObject() throws Exception {
+        // Verifies that resource values of annotation property attributes (field type object) are persisted as resources
+        this.em = getEntityManager("persistSupportsSimpleLiteralAnnotationPropertiesWithFieldOfTypeObject", false);
+        entityM.setObjectAnnotation(Generators.generateUri());
+        persist(entityM);
+
+        verifyStatementsPresent(List.of(
+                new Quad(URI.create(entityM.getKey()), URI.create(Vocabulary.p_m_objectAnnotationProperty),
+                        entityM.getObjectAnnotation())), em);
+    }
 }

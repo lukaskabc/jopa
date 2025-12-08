@@ -40,7 +40,7 @@ public class TestPersistenceProvider implements PersistenceProvider {
     }
 
     @Override
-    public EntityManagerFactory createEntityManagerFactory(String emName, Map<String, String> map) {
+    public EntityManagerFactory createEntityManagerFactory(String puName, Map<String, String> map) {
         createEmfCalled++;
         return emfMock;
     }

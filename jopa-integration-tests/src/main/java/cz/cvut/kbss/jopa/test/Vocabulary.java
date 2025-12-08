@@ -110,6 +110,7 @@ public class Vocabulary {
     public static final String p_m_multilingualReferencedList = ATTRIBUTE_IRI_BASE + "m-multilingualReferencedList";
     public static final String p_m_multilingualRdfSequence = ATTRIBUTE_IRI_BASE + "m-multilingualRdfSequence";
     public static final String p_m_locale = ATTRIBUTE_IRI_BASE + "m-locale";
+    public static final String p_m_objectAnnotationProperty = ATTRIBUTE_IRI_BASE + "m-objectAnnotationProperty";
 
     public static final String P_N_STR_ANNOTATION_PROPERTY = ATTRIBUTE_IRI_BASE + "annotationProperty";
     public static final String P_N_URI_ANNOTATION_PROPERTY = ATTRIBUTE_IRI_BASE + "annotationUri";

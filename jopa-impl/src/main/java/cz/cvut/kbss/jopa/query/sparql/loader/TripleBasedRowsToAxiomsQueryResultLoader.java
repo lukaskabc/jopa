@@ -1,4 +1,4 @@
-package cz.cvut.kbss.jopa.query.sparql;
+package cz.cvut.kbss.jopa.query.sparql.loader;
 
 import cz.cvut.kbss.jopa.exceptions.CardinalityConstraintViolatedException;
 import cz.cvut.kbss.jopa.exceptions.OWLPersistenceException;
@@ -27,12 +27,17 @@ import java.util.Optional;
 /**
  * Loads entity by aggregating rows with the same subject into axioms and then using
  * {@link UnitOfWork#readObjectFromAxioms(Class, Collection, Descriptor)} to read the entity.
+ * <p>
+ * It expects the query result rows to have three columns corresponding to the triple subject, property and object.
+ * <p>
+ * If the loader is unable to load the entity (e.g., due to cardinality constraint violation), it falls back to regular
+ * entity loading.
  *
  * @param <T> Result type
  */
-class RowsToAxiomsEntityQueryResultLoader<T> implements QueryResultLoader<T> {
+class TripleBasedRowsToAxiomsQueryResultLoader<T> implements QueryResultLoader<T> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RowsToAxiomsEntityQueryResultLoader.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TripleBasedRowsToAxiomsQueryResultLoader.class);
 
     private final UnitOfWork uow;
     private final Class<T> resultType;
@@ -41,7 +46,7 @@ class RowsToAxiomsEntityQueryResultLoader<T> implements QueryResultLoader<T> {
     private List<Axiom<?>> currentEntityAxioms = List.of();
     private NamedResource currentSubject;
 
-    RowsToAxiomsEntityQueryResultLoader(UnitOfWork uow, Class<T> resultType, Descriptor descriptor) {
+    TripleBasedRowsToAxiomsQueryResultLoader(UnitOfWork uow, Class<T> resultType, Descriptor descriptor) {
         this.uow = uow;
         this.resultType = resultType;
         this.descriptor = descriptor;

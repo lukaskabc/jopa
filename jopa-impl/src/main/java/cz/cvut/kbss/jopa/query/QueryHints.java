@@ -28,7 +28,7 @@ public class QueryHints {
     public static final String DISABLE_INFERENCE = "cz.cvut.kbss.jopa.query.disableInference";
 
     /**
-     * Allows to specify the target ontology for query execution.
+     * Allows specifying the target ontology for query execution.
      * <p>
      * By target ontology, it is meant either the shared ontology, which does not contain pending transactional changes,
      * or the transactional ontology (w.r.t. the persistence context issuing the query), where transactional changes may
@@ -40,6 +40,15 @@ public class QueryHints {
      * Valid values are {@literal CENTRAL} and {@literal TRANSACTIONAL}.
      */
     public static final String TARGET_ONTOLOGY = "cz.cvut.kbss.jopa.query.targetOntology";
+
+    /**
+     * Enables the use of optimized SPARQL query assembly and entity loading.
+     * <p>
+     * The optimized SPARQL query assembly and entity loading adjusts the query to load all entity attribute values as
+     * part of the query execution and reconstructs the resulting entities from the query results, instead of loading
+     * them one by one.
+     */
+    public static final String ENABLE_ENTITY_LOADING_OPTIMIZER = "cz.cvut.kbss.jopa.query.enableEntityLoadingOptimizer";
 
     private QueryHints() {
         throw new AssertionError();

@@ -1,5 +1,13 @@
 # JOPA - Change Log
 
+### 2.7.1 - 2025-12-05
+
+- Rework the entity loading query optimizer to use a query hint instead of a global configuration property.
+- Add a new optimizer that enumerates entity attributes to load to prevent unwanted retrieval of too much data.
+- Fix an issue with generating SPARQL queries for RDF container members when translating from SOQL (Bug #390).
+- Remove the experimental property enabling entity loading query optimizer in favor of the query hint.
+- Dependency updates: RDF4J 5.2.1.
+
 ### 2.7.0 - 2025-11-13
 
 - Do not start repository-level transaction for read-only access when relevant (Enhancement #386).

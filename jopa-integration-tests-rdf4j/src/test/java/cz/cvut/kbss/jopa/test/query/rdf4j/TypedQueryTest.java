@@ -18,7 +18,6 @@
 package cz.cvut.kbss.jopa.test.query.rdf4j;
 
 import cz.cvut.kbss.jopa.model.EntityManager;
-import cz.cvut.kbss.jopa.model.JOPAExperimentalProperties;
 import cz.cvut.kbss.jopa.test.environment.Rdf4jDataAccessor;
 import cz.cvut.kbss.jopa.test.environment.Rdf4jPersistenceFactory;
 import cz.cvut.kbss.jopa.test.query.QueryTestEnvironment;
@@ -48,8 +47,7 @@ public class TypedQueryTest extends TypedQueryRunner {
     static void setUpBeforeClass() {
         final Rdf4jPersistenceFactory persistenceFactory = new Rdf4jPersistenceFactory();
         em = persistenceFactory.getEntityManager("SPARQLTypedQueryTests", false,
-                Map.of(Rdf4jOntoDriverProperties.USE_INFERENCE, "true",
-                        JOPAExperimentalProperties.QUERY_ENABLE_ENTITY_LOADING_OPTIMIZER, "true"));
+                Map.of(Rdf4jOntoDriverProperties.USE_INFERENCE, "true"));
         QueryTestEnvironment.generateTestData(em);
         em.clear();
         em.getEntityManagerFactory().getCache().evictAll();

@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -74,10 +75,10 @@ public class QueryHintsHandler {
     /**
      * Representation of a query hint.
      * <p>
-     * The {@code valueArray} ensures that only supported values are provided to {@link #applyToQuery(Object,
-     * AbstractQuery, Statement)}. For example, if a hint is boolean-based and the configuration passes string "true",
-     * it is mapped to {@code true} based on {@code valueMap} which was constructed automatically from {@code
-     * valueArray}.
+     * The {@code valueArray} ensures that only supported values are provided to
+     * {@link #applyToQuery(Object, AbstractQuery, Statement)}. For example, if a hint is boolean-based and the
+     * configuration passes string "true", it is mapped to {@code true} based on {@code valueMap} which was constructed
+     * automatically from {@code valueArray}.
      * <p>
      * The {@code valueArray} is a two-dimensional array where each element is a single value, which in turn is a
      * two-element array where the first element is a string representation of the value and the second one is the value
@@ -95,6 +96,7 @@ public class QueryHintsHandler {
         static {
             registerHint(new DisableInferenceHint());
             registerHint(new TargetOntologyHint());
+            registerHint(new OptimizedQueryResultEntityLoadingHint());
         }
 
         Hint(String name, Object defaultValue) {
@@ -120,14 +122,23 @@ public class QueryHintsHandler {
         }
 
         static void apply(String hintName, Object hintValue, AbstractQuery query, Statement statement) {
+            getHint(hintName).ifPresent(h -> h.apply(hintValue, query, statement));
+        }
+
+        static Optional<Hint> getHint(String hintName) {
             if (!HINTS.containsKey(hintName)) {
                 LOG.warn("Unsupported query hint '{}'.", hintName);
-                return;
+                return Optional.empty();
             }
-            HINTS.get(hintName).apply(hintValue, query, statement);
+            return Optional.of(HINTS.get(hintName));
         }
 
         void apply(Object hintValue, AbstractQuery query, Statement statement) {
+            final Object toApply = getValueToApply(hintValue);
+            applyToQuery(toApply, query, statement);
+        }
+
+        Object getValueToApply(Object hintValue) {
             Object toApply = hintValue;
             if (shouldUseDefault(hintValue)) {
                 toApply = defaultValue;
@@ -137,7 +148,7 @@ public class QueryHintsHandler {
                     throw new IllegalArgumentException("Unsupported value '" + hintValue + "' of hint '" + name + "'.");
                 }
             }
-            applyToQuery(toApply, query, statement);
+            return toApply;
         }
 
         void initialize() {
@@ -190,15 +201,28 @@ public class QueryHintsHandler {
         public TargetOntologyHint() {
             super(QueryHints.TARGET_ONTOLOGY, Statement.StatementOntology.SHARED);
             this.valueArray = new Object[][]{{Statement.StatementOntology.SHARED.toString(),
-                                              Statement.StatementOntology.SHARED},
-                                             {Statement.StatementOntology.TRANSACTIONAL.toString(),
-                                              Statement.StatementOntology.TRANSACTIONAL}};
+                    Statement.StatementOntology.SHARED},
+                    {Statement.StatementOntology.TRANSACTIONAL.toString(),
+                            Statement.StatementOntology.TRANSACTIONAL}};
         }
 
         @Override
         void applyToQuery(Object hintValue, AbstractQuery query, Statement statement) {
             assert hintValue instanceof Statement.StatementOntology;
             statement.useOntology((Statement.StatementOntology) hintValue);
+        }
+    }
+
+    protected static class OptimizedQueryResultEntityLoadingHint extends Hint {
+        public OptimizedQueryResultEntityLoadingHint() {
+            super(QueryHints.ENABLE_ENTITY_LOADING_OPTIMIZER, Boolean.FALSE);
+            this.valueArray =
+                    new Object[][]{{Boolean.TRUE.toString(), Boolean.TRUE}, {Boolean.FALSE.toString(), Boolean.FALSE}};
+        }
+
+        @Override
+        void applyToQuery(Object hintValue, AbstractQuery query, Statement statement) {
+            // Do nothing, the optimizer is enabled as soon as the hint is set
         }
     }
 }
