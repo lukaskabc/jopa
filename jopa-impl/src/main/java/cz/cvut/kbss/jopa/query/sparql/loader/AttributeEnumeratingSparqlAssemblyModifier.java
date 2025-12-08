@@ -28,11 +28,11 @@ import java.util.Optional;
  * <p>
  * The injected patterns look like this:
  * <pre>
- * OPTIONAL { ?subject <property> ?value }
+ * OPTIONAL { ?subject &lt;property&gt; ?value }
  * </pre>
  * If a descriptor with at most one context (for each attribute) is provided, the injected patterns look like this:
  * <pre>
- * OPTIONAL { GRAPH ?g { ?subject <property> ?value } }
+ * OPTIONAL { GRAPH ?g { ?subject &lt;property&gt; ?value } }
  * </pre>
  * Where {@literal ?g} is determined from the descriptor.
  * <p>
