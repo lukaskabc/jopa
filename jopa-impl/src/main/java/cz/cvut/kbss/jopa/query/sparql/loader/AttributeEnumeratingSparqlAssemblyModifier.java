@@ -1,5 +1,6 @@
 package cz.cvut.kbss.jopa.query.sparql.loader;
 
+import cz.cvut.kbss.jopa.model.annotations.ParticipationConstraint;
 import cz.cvut.kbss.jopa.model.descriptors.Descriptor;
 import cz.cvut.kbss.jopa.model.metamodel.AbstractIdentifiableType;
 import cz.cvut.kbss.jopa.model.metamodel.Attribute;
@@ -14,7 +15,9 @@ import org.antlr.v4.runtime.TokenStreamRewriter;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -78,22 +81,27 @@ public class AttributeEnumeratingSparqlAssemblyModifier implements SparqlAssembl
                                                                                                                  .get(0));
         final String subjectVariable = "?" + subjectParamName;
         attributes().forEach(att -> {
+            final int min = Arrays.stream(att.getConstraints()).map(ParticipationConstraint::min)
+                                  .min(Comparator.naturalOrder()).orElse(0);
             final String variable = "?" + subjectParamName + att.getName();
             variables.add(variable);
-            attributePatterns.append("OPTIONAL { ");
+            if (min < 1) {
+                attributePatterns.append("OPTIONAL { ");
+            }
             final Optional<String> ctx = context(att);
             ctx.ifPresent(uri -> attributePatterns.append("GRAPH <").append(uri).append("> { "));
             attributePatterns.append(subjectVariable).append(" <").append(att.getIRI())
-                             .append("> ").append(variable).append(" } ");
+                             .append("> ").append(variable).append(" . ");
+            if (min < 1) {
+                attributePatterns.append(" } ");
+            }
             ctx.ifPresent(uri -> attributePatterns.append("} "));
         });
         final String variable = "?" + subjectParamName + TYPES_VAR_SUFFIX;
         variables.add(variable);
-        attributePatterns.append("OPTIONAL { ");
         final Optional<String> ctx = typesContext();
         ctx.ifPresent(uri -> attributePatterns.append("GRAPH <").append(uri).append("> { "));
-        attributePatterns.append(subjectVariable).append(" a ").append(variable)
-                         .append(" } ");
+        attributePatterns.append(subjectVariable).append(" a ").append(variable).append(" . ");
         ctx.ifPresent(uri -> attributePatterns.append("} "));
         tokenRewriter.insertBefore(queryAttributes.lastClosingCurlyBraceToken(), attributePatterns.toString());
         return variables;
