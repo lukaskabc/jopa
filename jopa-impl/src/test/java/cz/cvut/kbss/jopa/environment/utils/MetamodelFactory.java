@@ -98,6 +98,7 @@ import cz.cvut.kbss.jopa.oom.converter.ToLexicalFormConverter;
 import cz.cvut.kbss.jopa.oom.converter.datetime.LocalDateTimeConverter;
 import cz.cvut.kbss.jopa.utils.Configuration;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -490,7 +491,28 @@ public class MetamodelFactory {
         when(etMock.getFieldSpecifications()).thenReturn(Set.of(setAMock, idMock));
         initAttribute(etMock, setAMock, new AttributeInfo(OWLClassJ.getOwlClassAField(),
                 Attribute.PersistentAttributeType.OBJECT).collectionType(CollectionType.SET)
-                                                         .elementType(OWLClassA.class).valueType(etAMock));
+                                                         .elementType(OWLClassA.class).valueType(etAMock)
+                .constraints(new ParticipationConstraint() {
+                    @Override
+                    public Class<? extends Annotation> annotationType() {
+                        return ParticipationConstraint.class;
+                    }
+
+                    @Override
+                    public String owlObjectIRI() {
+                        return "";
+                    }
+
+                    @Override
+                    public int min() {
+                        return 1;
+                    }
+
+                    @Override
+                    public int max() {
+                        return -1;
+                    }
+                }));
         initIdentifier(etMock, idMock, OWLClassJ.class.getDeclaredField("uri"), false);
     }
 

@@ -1,5 +1,10 @@
 # JOPA - Change Log
 
+### 2.7.2 - 2025-12-11
+
+- Fix an issue with loading entities of classes without `@Types` by the entity loading optimizer (Bug #396).
+- Do not use `OPTIONAL` pattern for attributes that are required in the entity loading optimizer.
+
 ### 2.7.1 - 2025-12-05
 
 - Rework the entity loading query optimizer to use a query hint instead of a global configuration property.

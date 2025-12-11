@@ -363,14 +363,14 @@ public abstract class TypedQueryRunner extends BaseQueryRunner {
             assertEquals(matching.size(), result.size());
             matching.forEach(m -> assertTrue(result.stream().anyMatch(rm -> rm.getKey().equals(m.getKey()))));
         } finally {
-            cleanupTestData(Vocabulary.C_OWL_CLASS_M);
+            cleanupClassMTestData();
         }
     }
 
-    protected void cleanupTestData(String type) {
+    protected void cleanupClassMTestData() {
         getEntityManager().getTransaction().begin();
         getEntityManager().createNativeQuery("DELETE WHERE { ?x a ?type . ?x ?y ?z . }")
-                          .setParameter("type", URI.create(type)).executeUpdate();
+                          .setParameter("type", URI.create(Vocabulary.C_OWL_CLASS_M)).executeUpdate();
         getEntityManager().getTransaction().commit();
     }
 
@@ -410,6 +410,19 @@ public abstract class TypedQueryRunner extends BaseQueryRunner {
         final List<OWLClassA> entities = QueryTestEnvironment.getData(OWLClassA.class);
         final List<OWLClassA> result = getEntityManager().createNativeQuery("SELECT ?x WHERE { ?x a ?type . }", OWLClassA.class)
                                                          .setParameter("type", URI.create(Vocabulary.C_OWL_CLASS_A))
+                                                         .setHint(QueryHints.ENABLE_ENTITY_LOADING_OPTIMIZER, "true")
+                                                         .getResultList();
+        assertThat(result, containsSameEntities(entities));
+    }
+
+    /**
+     * Bug #396
+     */
+    @Test
+    public void optimizedEntityLoadingWorksForEntityClassesWithoutTypesField() {
+        final List<OWLClassE> entities = QueryTestEnvironment.getData(OWLClassE.class);
+        final List<OWLClassE> result = getEntityManager().createNativeQuery("SELECT ?x WHERE { ?x a ?type . }", OWLClassE.class)
+                                                         .setParameter("type", URI.create(Vocabulary.C_OWL_CLASS_E))
                                                          .setHint(QueryHints.ENABLE_ENTITY_LOADING_OPTIMIZER, "true")
                                                          .getResultList();
         assertThat(result, containsSameEntities(entities));

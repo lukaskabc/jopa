@@ -1,9 +1,12 @@
 package cz.cvut.kbss.jopa.query.sparql.loader;
 
+import cz.cvut.kbss.jopa.model.annotations.ParticipationConstraint;
 import cz.cvut.kbss.jopa.model.descriptors.Descriptor;
+import cz.cvut.kbss.jopa.model.metamodel.AbstractIdentifiableType;
 import cz.cvut.kbss.jopa.model.metamodel.Attribute;
 import cz.cvut.kbss.jopa.model.metamodel.FieldSpecification;
 import cz.cvut.kbss.jopa.model.metamodel.IdentifiableEntityType;
+import cz.cvut.kbss.jopa.model.metamodel.TypesSpecification;
 import cz.cvut.kbss.jopa.query.QueryType;
 import cz.cvut.kbss.jopa.query.sparql.QueryAttributes;
 import cz.cvut.kbss.jopa.query.sparql.TokenQueryParameter;
@@ -12,8 +15,11 @@ import org.antlr.v4.runtime.TokenStreamRewriter;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -21,10 +27,10 @@ import java.util.Optional;
  * <p>
  * This optimizer is applicable for SELECT queries that select instances of an entity class. Instead of loading the
  * instances one by one after the query is evaluated, this optimizer modifies the query to fetch all available entity
- * attributes by injecting optional triple patterns for each of the entity attributes and projecting the values from
- * the query. If the result type has subclasses, all attributes of the subclasses are enumerated in the query so that
- * the instance loading can then determine the result type and load the appropriate instance with all the relevant
- * attribute data.
+ * attributes by injecting optional triple patterns for each of the entity attributes and projecting the values from the
+ * query. If the result type has subclasses, all attributes of the subclasses are enumerated in the query so that the
+ * instance loading can then determine the result type and load the appropriate instance with all the relevant attribute
+ * data.
  * <p>
  * The injected patterns look like this:
  * <pre>
@@ -42,6 +48,8 @@ import java.util.Optional;
  * </ul>
  */
 public class AttributeEnumeratingSparqlAssemblyModifier implements SparqlAssemblyModifier {
+
+    static final String TYPES_VAR_SUFFIX = "types";
 
     private final IdentifiableEntityType<?> resultType;
 
@@ -73,25 +81,28 @@ public class AttributeEnumeratingSparqlAssemblyModifier implements SparqlAssembl
                                                                                                                  .get(0));
         final String subjectVariable = "?" + subjectParamName;
         attributes().forEach(att -> {
+            final int min = Arrays.stream(att.getConstraints()).map(ParticipationConstraint::min)
+                                  .min(Comparator.naturalOrder()).orElse(0);
             final String variable = "?" + subjectParamName + att.getName();
             variables.add(variable);
-            attributePatterns.append("OPTIONAL { ");
+            if (min < 1) {
+                attributePatterns.append("OPTIONAL { ");
+            }
             final Optional<String> ctx = context(att);
             ctx.ifPresent(uri -> attributePatterns.append("GRAPH <").append(uri).append("> { "));
             attributePatterns.append(subjectVariable).append(" <").append(att.getIRI())
-                             .append("> ").append(variable).append(" } ");
+                             .append("> ").append(variable).append(" . ");
+            if (min < 1) {
+                attributePatterns.append(" } ");
+            }
             ctx.ifPresent(uri -> attributePatterns.append("} "));
         });
-        if (hasTypes()) {
-            final String variable = "?" + subjectParamName + "types";
-            variables.add(variable);
-            attributePatterns.append("OPTIONAL { ");
-            final Optional<String> ctx = context(resultType.getTypes());
-            ctx.ifPresent(uri -> attributePatterns.append("GRAPH <").append(uri).append("> { "));
-            attributePatterns.append(subjectVariable).append(" a ").append(variable)
-                             .append(" } ");
-            ctx.ifPresent(uri -> attributePatterns.append("} "));
-        }
+        final String variable = "?" + subjectParamName + TYPES_VAR_SUFFIX;
+        variables.add(variable);
+        final Optional<String> ctx = typesContext();
+        ctx.ifPresent(uri -> attributePatterns.append("GRAPH <").append(uri).append("> { "));
+        attributePatterns.append(subjectVariable).append(" a ").append(variable).append(" . ");
+        ctx.ifPresent(uri -> attributePatterns.append("} "));
         tokenRewriter.insertBefore(queryAttributes.lastClosingCurlyBraceToken(), attributePatterns.toString());
         return variables;
     }
@@ -104,16 +115,20 @@ public class AttributeEnumeratingSparqlAssemblyModifier implements SparqlAssembl
         return atts;
     }
 
-    private boolean hasTypes() {
-        if (resultType.getTypes() != null) {
-            return true;
-        }
-        return resultType.getSubtypes().stream()
-                         .anyMatch(subtype -> subtype.getTypes() != null);
-    }
-
     private Optional<String> context(FieldSpecification<?, ?> att) {
         assert descriptor.getAttributeContexts(att).size() <= 1;
         return descriptor.getSingleAttributeContext(att).map(URI::toString);
+    }
+
+    private Optional<String> typesContext() {
+        final Optional<? extends TypesSpecification<?, ?>> optionalTs = resultType.getTypes() != null ? Optional.of(resultType.getTypes()) : resultType.getSubtypes()
+                                                                                                                                                       .stream()
+                                                                                                                                                       .map(AbstractIdentifiableType::getTypes)
+                                                                                                                                                       .filter(Objects::nonNull)
+                                                                                                                                                       .findFirst();
+        return optionalTs.flatMap(ts -> {
+            assert descriptor.getAttributeContexts(ts).size() <= 1;
+            return descriptor.getSingleAttributeContext(ts);
+        }).map(URI::toString);
     }
 }

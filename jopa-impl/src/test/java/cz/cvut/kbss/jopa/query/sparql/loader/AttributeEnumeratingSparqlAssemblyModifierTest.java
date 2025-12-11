@@ -34,14 +34,15 @@ class AttributeEnumeratingSparqlAssemblyModifierTest {
     }
 
     @Test
-    void modifyAddsOptionalTriplePatternForEntityAttributesAndProjectsAttributeValues() {
+    void modifyAlwaysAddsTriplePatternForEntityTypes() {
         final TokenStreamSparqlQueryHolder holder = parser.parseQuery("SELECT ?x WHERE { ?x a ?type . }");
         final AttributeEnumeratingSparqlAssemblyModifier sut = createSut(metamodelMocks.forOwlClassD().entityType());
         holder.setAssemblyModifier(sut);
 
         final String result = holder.assembleQuery();
-        assertThat(result, equalToCompressingWhiteSpace("SELECT ?x ?xowlClassA WHERE { ?x a ?type . " +
-                "OPTIONAL { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#hasA> ?xowlClassA } }"));
+        assertThat(result, equalToCompressingWhiteSpace("SELECT ?x ?xowlClassA ?xtypes WHERE { ?x a ?type . " +
+                "OPTIONAL { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#hasA> ?xowlClassA . } " +
+                "?x a ?xtypes . }"));
     }
 
     private static <X> AttributeEnumeratingSparqlAssemblyModifier createSut(IdentifiableEntityType<X> et) {
@@ -54,15 +55,15 @@ class AttributeEnumeratingSparqlAssemblyModifierTest {
     }
 
     @Test
-    void modifyAddsTypesOptionalTriplePatternAndProjection() {
+    void modifyAddsOptionalTriplePatternForEntityAttributesAndProjectsAttributeValues() {
         final TokenStreamSparqlQueryHolder holder = parser.parseQuery("SELECT ?x WHERE { ?x a ?type . }");
         final AttributeEnumeratingSparqlAssemblyModifier sut = createSut(metamodelMocks.forOwlClassA().entityType());
         holder.setAssemblyModifier(sut);
 
         final String result = holder.assembleQuery();
         assertThat(result, equalToCompressingWhiteSpace("SELECT ?x ?xstringAttribute ?xtypes WHERE { ?x a ?type . " +
-                "OPTIONAL { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#A-stringAttribute> ?xstringAttribute } " +
-                "OPTIONAL { ?x a ?xtypes } }"));
+                "OPTIONAL { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#A-stringAttribute> ?xstringAttribute . } " +
+                "?x a ?xtypes . }"));
     }
 
     @Test
@@ -76,8 +77,8 @@ class AttributeEnumeratingSparqlAssemblyModifierTest {
 
         final String result = holder.assembleQuery();
         assertThat(result, equalToCompressingWhiteSpace("SELECT ?x ?xstringAttribute ?xtypes WHERE { ?x a ?type . " +
-                "OPTIONAL { GRAPH <" + ctx + "> { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#A-stringAttribute> ?xstringAttribute } } " +
-                "OPTIONAL { GRAPH <" + ctx + "> { ?x a ?xtypes } } }"));
+                "OPTIONAL { GRAPH <" + ctx + "> { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#A-stringAttribute> ?xstringAttribute . } } " +
+                "GRAPH <" + ctx + "> { ?x a ?xtypes . } }"));
     }
 
     @Test
@@ -92,8 +93,8 @@ class AttributeEnumeratingSparqlAssemblyModifierTest {
 
         final String result = holder.assembleQuery();
         assertThat(result, equalToCompressingWhiteSpace("SELECT ?x ?xstringAttribute ?xtypes WHERE { ?x a ?type . " +
-                "OPTIONAL { GRAPH <" + ctx + "> { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#A-stringAttribute> ?xstringAttribute } } " +
-                "OPTIONAL { ?x a ?xtypes } }"));
+                "OPTIONAL { GRAPH <" + ctx + "> { ?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#A-stringAttribute> ?xstringAttribute . } } " +
+                "?x a ?xtypes . }"));
     }
 
     @Test
@@ -105,5 +106,17 @@ class AttributeEnumeratingSparqlAssemblyModifierTest {
         final String result = holder.assembleQuery();
         assertThat(result, containsString(Vocabulary.P_R_STRING_ATTRIBUTE));
         assertThat(result, containsString(Vocabulary.P_HAS_A));
+    }
+
+    @Test
+    void modifyAddsTriplePatternWithoutOptionalWhenMinimumParticipationConstraintIsPresentAndGreaterThanZero() {
+        final TokenStreamSparqlQueryHolder holder = parser.parseQuery("SELECT ?x WHERE { ?x a ?type . }");
+        final AttributeEnumeratingSparqlAssemblyModifier sut = createSut(metamodelMocks.forOwlClassJ().entityType());
+        holder.setAssemblyModifier(sut);
+
+        final String result = holder.assembleQuery();
+        assertThat(result, equalToCompressingWhiteSpace("SELECT ?x ?xowlClassA ?xtypes WHERE { ?x a ?type . " +
+                "?x <http://krizik.felk.cvut.cz/ontologies/jopa/attributes#hasA> ?xowlClassA . " +
+                "?x a ?xtypes . }"));
     }
 }
