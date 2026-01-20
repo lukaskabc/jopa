@@ -968,4 +968,12 @@ public class SoqlQueryParserTest {
                 "FILTER (langMatches(lang(?qLabel), ?qParentString)) }";
         parseAndAssertEquality(expectedSparql, soql);
     }
+
+    @Test
+    void parseQuerySupportsSelectionByIdentifierInCollection() {
+        final String soql = "SELECT m FROM OWLClassM m WHERE m.key IN :collection";
+        final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassM) + " . " +
+                "FILTER (?x IN (?collection)) }";
+        parseAndAssertEquality(expectedSparql, soql);
+    }
 }

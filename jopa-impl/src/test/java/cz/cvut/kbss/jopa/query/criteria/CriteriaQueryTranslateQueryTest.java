@@ -147,6 +147,34 @@ public class CriteriaQueryTranslateQueryTest {
         assertEquals(expectedSoqlQuery, generatedSoqlQuery);
     }
 
+    @Test
+    void translateQuerySupportsSelectionByIdentifierInParameter() {
+        CriteriaQueryImpl<OWLClassM> query = cb.createQuery(OWLClassM.class);
+        Root<OWLClassM> root = query.from(OWLClassM.class);
+        final List<String> values = List.of("urn:test");
+        final List<Predicate> predicates = new ArrayList<>();
+        predicates.add(root.getAttr("key").in(values));
+        query.select(root).where(predicates);
+
+        final String generatedSoql = query.translateQuery(criteriaParameterFiller);
+        final String expectedSoql = "SELECT owlclassm FROM OWLClassM owlclassm WHERE owlclassm.key IN (:generatedName0)";
+        assertEquals(expectedSoql, generatedSoql);
+    }
+
+    @Test
+    void translateQuerySupportsSelectionOfRootInParameter() {
+        CriteriaQueryImpl<OWLClassM> query = cb.createQuery(OWLClassM.class);
+        Root<OWLClassM> root = query.from(OWLClassM.class);
+        final List<String> values = List.of("urn:test");
+        final List<Predicate> predicates = new ArrayList<>();
+        predicates.add(root.in(values));
+        query.select(root).where(predicates);
+
+        final String generatedSoql = query.translateQuery(criteriaParameterFiller);
+        final String expectedSoql = "SELECT owlclassm FROM OWLClassM owlclassm WHERE owlclassm.key IN (:generatedName0)";
+        assertEquals(expectedSoql, generatedSoql);
+    }
+
     @Nested
     class StringBasedPropertyQueryTests {
         @Test

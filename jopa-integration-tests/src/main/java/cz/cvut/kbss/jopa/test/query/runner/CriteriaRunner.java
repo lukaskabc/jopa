@@ -581,4 +581,20 @@ public abstract class CriteriaRunner extends BaseQueryRunner {
         assertEquals(expected.size(), result.size());
         assertThat(result, containsSameEntities(expected));
     }
+
+    @Test
+    void testSelectionByIdentifierInCollection() {
+        final List<OWLClassM> aInstances = QueryTestEnvironment.getData(OWLClassM.class);
+        final List<OWLClassM> expected = aInstances.subList(1, 3);
+        final CriteriaBuilder cb = getEntityManager().getCriteriaBuilder();
+        final CriteriaQuery<OWLClassM> query = cb.createQuery(OWLClassM.class);
+        final Root<OWLClassM> root = query.from(OWLClassM.class);
+        final List<Predicate> predicates = new ArrayList<>();
+        predicates.add(root.getAttr("key").in(expected));
+        query.select(root).distinct().where(predicates);
+
+        final TypedQuery<OWLClassM> tq = getEntityManager().createQuery(query);
+        final List<OWLClassM> result = tq.getResultList();
+        assertEquals(expected.size(), result.size());
+    }
 }
