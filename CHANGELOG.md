@@ -1,5 +1,12 @@
 # JOPA - Change Log
 
+### 2.8.0 - 2026-01-27
+
+- Support langMatches in SOQL and Criteria API (Enhancement #395).
+- Use default graph in entity loading query optimizer when dealing with inferred attributes in GraphDB (Bug #402).
+- Trigger lazy loading when equals/hashCode is called on proxy (Bug #399).
+- Dependency updates: RDF4J 5.2.2, maven plugins, test dependencies.
+
 ### 2.7.2 - 2025-12-11
 
 - Fix an issue with loading entities of classes without `@Types` by the entity loading optimizer (Bug #396).
