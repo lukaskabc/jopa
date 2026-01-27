@@ -18,6 +18,7 @@
 package cz.cvut.kbss.jopa;
 
 import cz.cvut.kbss.jopa.environment.TestPersistenceProvider;
+import cz.cvut.kbss.jopa.model.EntityManagerFactory;
 import cz.cvut.kbss.jopa.model.PersistenceProperties;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Execution(ExecutionMode.SAME_THREAD)
@@ -38,9 +40,11 @@ class PersistenceTest {
     void createEmfWithPropertiesInstantiatesPersistenceProviderFromProperties() {
         final Map<String, String> props = Collections.singletonMap(PersistenceProperties.JPA_PERSISTENCE_PROVIDER,
                 TestPersistenceProvider.class.getName());
-        Persistence.createEntityManagerFactory("testPU", props);
-        Assertions.assertNotNull(TestPersistenceProvider.getInstance());
-        Assertions.assertEquals(1, TestPersistenceProvider.getInstance().getCreateEmfCalled());
+        try (final EntityManagerFactory emf = Persistence.createEntityManagerFactory("testPU", props)) {
+            assertNotNull(emf);
+            Assertions.assertNotNull(TestPersistenceProvider.getInstance());
+            Assertions.assertEquals(1, TestPersistenceProvider.getInstance().getCreateEmfCalled());
+        }
     }
 
     @Test

@@ -35,6 +35,7 @@ public class Vocabulary {
     public static final String c_OwlClassL = CLASS_BASE + "OWLClassL";
     public static final String c_OwlClassM = CLASS_BASE + "OWLClassM";
     public static final String c_OwlClassN = CLASS_BASE + "OWLClassN";
+    public static final String c_OwlClassQ = CLASS_BASE + "OWLClassQ";
     public static final String C_OWLClassR = CLASS_BASE + "OWLClassR";
     public static final String c_OwlClassS = CLASS_BASE + "OWLClassS";
     public static final String c_OwlClassT = CLASS_BASE + "OWLClassT";
@@ -71,6 +72,9 @@ public class Vocabulary {
     public static final String p_m_withConverter = ATTRIBUTE_BASE + "m-withConverter";
     public static final String p_m_objectOneOfEnumAttribute = ATTRIBUTE_BASE + "m-objectOneOfEnumAttribute";
 
+    public static final String p_q_parentStringAttribute = ATTRIBUTE_BASE + "q-parentStringAttribute";
+    public static final String p_q_stringAttribute = ATTRIBUTE_BASE + "q-stringAttribute";
+
     public static final String P_R_STRING_ATTRIBUTE = ATTRIBUTE_BASE + "R-stringAttribute";
     public static final String P_HAS_A = ATTRIBUTE_BASE + "hasA";
 
@@ -93,6 +97,8 @@ public class Vocabulary {
     public static final String P_W_LIST_STRING_ATTRIBUTE = ATTRIBUTE_BASE + "listStringAttribute";
     public static final String P_W_COLLECTION_STRING_ATTRIBUTE = ATTRIBUTE_BASE + "collectionStringAttribute";
 
+    public static final String p_p_firstName = ATTRIBUTE_BASE + "firstName";
+    public static final String p_p_lastName = ATTRIBUTE_BASE + "lastName";
     public static final String p_p_username = ATTRIBUTE_BASE + "username";
     public static final String p_p_age = ATTRIBUTE_BASE + "age";
     public static final String p_p_hasPhone = ATTRIBUTE_BASE + "hasPhone";

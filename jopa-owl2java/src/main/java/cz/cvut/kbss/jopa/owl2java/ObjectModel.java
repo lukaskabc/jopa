@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Wraps the generated object model, allowing to access it in memory or write it out to the file system.
  */
-record ObjectModel(JCodeModel codeModel) {
+public record ObjectModel(JCodeModel codeModel) {
 
     private static final Logger LOG = LoggerFactory.getLogger(ObjectModel.class);
 

@@ -28,21 +28,44 @@ import cz.cvut.kbss.ontodriver.owlapi.environment.TestUtils;
 import cz.cvut.kbss.ontodriver.owlapi.util.OwlapiUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.semanticweb.owlapi.model.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.semanticweb.owlapi.model.AddAxiom;
+import org.semanticweb.owlapi.model.AddImport;
+import org.semanticweb.owlapi.model.IRI;
+import org.semanticweb.owlapi.model.OWLDataFactory;
+import org.semanticweb.owlapi.model.OWLDataProperty;
+import org.semanticweb.owlapi.model.OWLNamedIndividual;
+import org.semanticweb.owlapi.model.OWLObjectProperty;
+import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.impl.OWLNamedIndividualNodeSet;
 import org.semanticweb.owlapi.vocab.OWL2Datatype;
 
 import java.net.URI;
 import java.net.URL;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class PropertiesHandlerTest {
 
     private static final URI PK = URI.create("http://krizik.felk.cvut.cz/ontologies/jopa#Entity");
@@ -55,9 +78,7 @@ public class PropertiesHandlerTest {
     @Mock
     private OwlapiAdapter adapterMock;
 
-
     private OWLOntology ontology;
-
 
     private OWLOntologyManager manager;
     @Mock
@@ -73,7 +94,6 @@ public class PropertiesHandlerTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        MockitoAnnotations.openMocks(this);
         final OntologySnapshot snapshot = TestUtils.initRealOntology(reasonerMock);
         this.ontology = snapshot.ontology();
         this.manager = snapshot.ontologyManager();

@@ -19,11 +19,12 @@ package cz.cvut.kbss.jopa.query.criteria.expressions;
 
 import cz.cvut.kbss.jopa.model.metamodel.EntityType;
 import cz.cvut.kbss.jopa.model.metamodel.FieldSpecification;
+import cz.cvut.kbss.jopa.model.metamodel.Identifier;
 import cz.cvut.kbss.jopa.model.metamodel.Metamodel;
 import cz.cvut.kbss.jopa.model.metamodel.SingularAttribute;
+import cz.cvut.kbss.jopa.model.query.criteria.CriteriaBuilder;
 import cz.cvut.kbss.jopa.model.query.criteria.Path;
 import cz.cvut.kbss.jopa.query.criteria.PathImpl;
-import cz.cvut.kbss.jopa.model.query.criteria.CriteriaBuilder;
 
 public abstract class AbstractPathExpression<X> extends AbstractExpression<X> implements Path<X> {
 
@@ -37,6 +38,7 @@ public abstract class AbstractPathExpression<X> extends AbstractExpression<X> im
         this.metamodel = metamodel;
     }
 
+    @Override
     public <Y> Path<Y> getAttr(String attributeName) {
         final EntityType<X> et = metamodel.entity(type);
         final FieldSpecification<? super X, ?> fs;
@@ -50,15 +52,20 @@ public abstract class AbstractPathExpression<X> extends AbstractExpression<X> im
         return new PathImpl<>(this.metamodel, this, fs, this.cb);
     }
 
+    @Override
     public <Y> Path<Y> getAttr(SingularAttribute<? super X, Y> attribute) {
         return new PathImpl<>(this.metamodel, this, attribute, this.cb);
     }
 
+    @Override
+    public <Y> Path<Y> getAttr(Identifier<? super X, Y> identifier) {
+        return new PathImpl<>(this.metamodel, this, identifier, this.cb);
+    }
 
+    @Override
     public Path<?> getParentPath() {
         return this.pathSource;
     }
-
 }
 
 

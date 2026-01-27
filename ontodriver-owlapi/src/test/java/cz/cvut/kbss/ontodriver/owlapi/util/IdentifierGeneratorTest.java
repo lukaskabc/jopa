@@ -20,8 +20,9 @@ package cz.cvut.kbss.ontodriver.owlapi.util;
 import cz.cvut.kbss.ontodriver.exception.IdentifierGenerationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
 
@@ -30,9 +31,15 @@ import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class IdentifierGeneratorTest {
 
     @Mock
@@ -42,7 +49,6 @@ class IdentifierGeneratorTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         this.generator = new IdentifierGenerator(ontologyMock);
     }
 

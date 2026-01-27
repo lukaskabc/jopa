@@ -32,9 +32,12 @@ class SoqlFunctionTranslator {
             SoqlConstants.Functions.LOWER, "LCASE",
             SoqlConstants.Functions.LENGTH, "STRLEN",
             SoqlConstants.Functions.ABS, "ABS",
+            SoqlConstants.Functions.ROUND, "ROUND",
             SoqlConstants.Functions.CEIL, "CEIL",
             SoqlConstants.Functions.FLOOR, "FLOOR",
-            SoqlConstants.Functions.LANG, "lang"
+            SoqlConstants.Functions.CONCAT, "CONCAT",
+            SoqlConstants.Functions.LANG, "lang",
+            SoqlConstants.Functions.LANG_MATCHES, "langMatches"
     );
 
     private SoqlFunctionTranslator() {

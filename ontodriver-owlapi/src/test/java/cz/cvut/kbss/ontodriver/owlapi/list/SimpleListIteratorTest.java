@@ -39,7 +39,7 @@ public class SimpleListIteratorTest extends OwlapiListIteratorBase {
     }
 
     @Override
-    protected OwlapiListIterator<NamedResource> iterator() {
+    OwlapiListIterator<NamedResource> iterator() {
         return new SimpleListIterator(descriptor, snapshot, axiomAdapter);
     }
 }

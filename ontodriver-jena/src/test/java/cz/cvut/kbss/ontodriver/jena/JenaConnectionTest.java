@@ -23,21 +23,35 @@ import cz.cvut.kbss.ontodriver.jena.connector.StorageConnector;
 import cz.cvut.kbss.ontodriver.jena.environment.Generator;
 import cz.cvut.kbss.ontodriver.jena.list.JenaLists;
 import cz.cvut.kbss.ontodriver.jena.util.ConnectionListener;
-import cz.cvut.kbss.ontodriver.model.*;
+import cz.cvut.kbss.ontodriver.model.Assertion;
+import cz.cvut.kbss.ontodriver.model.Axiom;
+import cz.cvut.kbss.ontodriver.model.AxiomImpl;
+import cz.cvut.kbss.ontodriver.model.NamedResource;
+import cz.cvut.kbss.ontodriver.model.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class JenaConnectionTest {
 
     private static final NamedResource SUBJECT = NamedResource.create(Generator.generateUri());
@@ -49,7 +63,6 @@ public class JenaConnectionTest {
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
         this.connection = new JenaConnection(adapterMock);
     }
 

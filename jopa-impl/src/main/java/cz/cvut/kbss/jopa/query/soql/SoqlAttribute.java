@@ -22,7 +22,6 @@ import cz.cvut.kbss.jopa.query.sparql.SparqlConstants;
 import cz.cvut.kbss.jopa.utils.IdentifierTransformer;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -32,18 +31,19 @@ class SoqlAttribute extends SoqlParameter {
 
     private String value;
 
-    private boolean isNot = false;
+    private boolean isNot;
 
     private FilterableExpression operator;
 
-    private boolean isOrderBy = false;
+    private boolean isOrderBy;
 
-    private boolean isGroupBy = false;
+    private boolean isGroupBy;
 
     private boolean projected;
 
     public SoqlAttribute(SoqlNode firstNode) {
         super(firstNode);
+        firstNode.setSoqlAttribute(this);
     }
 
     public String getValue() {
@@ -82,6 +82,12 @@ class SoqlAttribute extends SoqlParameter {
         isGroupBy = groupBy;
     }
 
+    @Override
+    public void setFirstNode(SoqlNode firstNode) {
+        super.setFirstNode(firstNode);
+        firstNode.setSoqlAttribute(this);
+    }
+
     public boolean isProjected() {
         return projected;
     }
@@ -102,17 +108,17 @@ class SoqlAttribute extends SoqlParameter {
         return !getFirstNode().hasChild() && operator == null;
     }
 
-    public List<String> getFilterExpressions() {
+    public List<String> getFilterExpressions(String rootVariable) {
         assert requiresFilter();
-        String filterParam = getAsParam();
-        final String filterValue = SoqlUtils.soqlVariableToSparqlVariable(value);
+        String filterParam = getAsParam(rootVariable);
+        final String filterValue = value != null ? SoqlUtils.soqlVariableToSparqlVariable(value) : null;
         if (getFirstNode().requiresFilterExpression()) {
             filterParam = getFirstNode().toFilterExpression(filterParam, filterValue);
         }
         if (operator != null && operator.requiresFilterExpression()) {
-            return Collections.singletonList(operator.toFilterExpression(filterParam, filterValue));
+            return List.of(operator.toFilterExpression(filterParam, filterValue));
         } else {
-            return Collections.singletonList(filterParam + " = " + filterValue);
+            return List.of(filterValue != null ? filterParam + " = " + filterValue : filterParam);
         }
     }
 
@@ -128,34 +134,36 @@ class SoqlAttribute extends SoqlParameter {
     }
 
     private List<String> buildTriplePatterns(String rootVariable, Map<FieldSpecification<?, ?>, TriplePatternEnhancer> tpEnhancers) {
-        final List<String> triplePatterns = new ArrayList<>();
-        StringBuilder buildParam = new StringBuilder("?");
-        buildParam.append(getFirstNode().getValue());
+        String buildParam = "?" + getFirstNode().getValue();
         SoqlNode pointer = getFirstNode();
 
-        do {
-            SoqlNode newPointer = pointer.getChild();
+        return triplePatterns(pointer, 0, rootVariable, buildParam, tpEnhancers);
+    }
+
+    private List<String> triplePatterns(SoqlNode pointer, int depth, String rootVariable, String buildParam, Map<FieldSpecification<?, ?>, TriplePatternEnhancer> tpEnhancers) {
+        final List<String> triplePatterns = new ArrayList<>();
+        for (SoqlNode newPointer: pointer.getChildren()) {
             if (newPointer.getIri().isEmpty()) {
-                break;
+                triplePatterns.addAll(triplePatterns(newPointer, depth, rootVariable, buildParam, tpEnhancers));
+                continue;
             }
-            final String variable = triplePatterns.isEmpty() ? rootVariable : "?" + pointer.getValue();
-            buildParam.append(newPointer.getCapitalizedValue());
+            final String variable = depth == 0 ? rootVariable : "?" + pointer.getValue();
+            buildParam += newPointer.getCapitalizedValue();
             final String param = buildTriplePatternObject(newPointer, buildParam);
             final TriplePatternEnhancer triplePatternEnhancer = tpEnhancers.computeIfAbsent(newPointer.getAttribute(), TriplePatternEnhancer::create);
             triplePatterns.addAll(triplePatternEnhancer.getTriplePatterns(variable, toIri(newPointer), param));
-            pointer = newPointer;
-        } while (pointer.hasChild());
-
+            triplePatterns.addAll(triplePatterns(newPointer, depth + 1, rootVariable, buildParam, tpEnhancers));
+        }
         return triplePatterns;
     }
 
-    private String buildTriplePatternObject(SoqlNode newPointer, StringBuilder buildParam) {
+    private String buildTriplePatternObject(SoqlNode newPointer, String buildParam) {
         final String param;
-        if (newPointer.hasChild() || value == null) {
+        if ((newPointer.hasChild() && !newPointer.getChild().isIdentifier()) || value == null && !newPointer.occursInFilter()) {
             param = "?" + newPointer.getValue();
         } else {
-            if (requiresFilter()) {
-                param = buildParam.toString();
+            if (requiresFilter() || newPointer.occursInFilter()) {
+                param = buildParam;
             } else {
                 param = SoqlUtils.soqlVariableToSparqlVariable(value);
             }

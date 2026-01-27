@@ -143,22 +143,25 @@ public class JenaDriverTest {
     @Test
     public void closingDriverTwiceDoesNothing() throws Exception {
         this.driver = new JenaDriver(storageProps, properties);
-        driver.acquireConnection();
-        driver.close();
-        driver.close();
-        assertFalse(driver.isOpen());
+        try (JenaConnection c = driver.acquireConnection()) {
+            assertNotNull(c);
+            driver.close();
+            driver.close();
+            assertFalse(driver.isOpen());
+        }
     }
 
     @Test
     public void connectionClosedNotificationRemovesConnectionFromCollectionOfOpenConnections() throws Exception {
         this.driver = new JenaDriver(storageProps, properties);
-        final JenaConnection connection = driver.acquireConnection();
-        final Field openConnectionsField = JenaDriver.class.getDeclaredField("openConnections");
-        openConnectionsField.setAccessible(true);
-        final Set openConnections = (Set) openConnectionsField.get(driver);
-        assertTrue(openConnections.contains(connection));
-        driver.connectionClosed(connection);
-        assertFalse(openConnections.contains(connection));
+        try (final JenaConnection connection = driver.acquireConnection()) {
+            final Field openConnectionsField = JenaDriver.class.getDeclaredField("openConnections");
+            openConnectionsField.setAccessible(true);
+            final Set openConnections = (Set) openConnectionsField.get(driver);
+            assertTrue(openConnections.contains(connection));
+            driver.connectionClosed(connection);
+            assertFalse(openConnections.contains(connection));
+        }
     }
 
     @Test

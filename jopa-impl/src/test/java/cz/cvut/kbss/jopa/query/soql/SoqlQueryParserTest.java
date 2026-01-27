@@ -31,9 +31,12 @@ import cz.cvut.kbss.jopa.sessions.UnitOfWork;
 import cz.cvut.kbss.jopa.utils.Configuration;
 import cz.cvut.kbss.jopa.utils.IdentifierTransformer;
 import cz.cvut.kbss.jopa.vocabulary.RDF;
+import cz.cvut.kbss.jopa.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
@@ -43,6 +46,7 @@ import org.mockito.quality.Strictness;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalToCompressingWhiteSpace;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -54,6 +58,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@Execution(ExecutionMode.CONCURRENT)
 public class SoqlQueryParserTest {
 
     @Mock
@@ -624,13 +629,13 @@ public class SoqlQueryParserTest {
         final String javaLikeSoql = "SELECT p FROM Person p WHERE p.username != :username";
         final String expectedSparqlQuery =
                 "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . ?x " + strUri(Vocabulary.p_p_username) + " ?pUsername . FILTER (?pUsername != ?username) }";
-        parseAndAssertEquality(standardSoql, expectedSparqlQuery);
-        parseAndAssertEquality(javaLikeSoql, expectedSparqlQuery);
+        parseAndAssertEquality(expectedSparqlQuery, standardSoql);
+        parseAndAssertEquality(expectedSparqlQuery, javaLikeSoql);
     }
 
-    private void parseAndAssertEquality(String soql, String expectedSparql) {
+    private void parseAndAssertEquality(String expectedSparql, String soql) {
         final QueryHolder holder = sut.parseQuery(soql);
-        assertEquals(expectedSparql.trim(), holder.getQuery().trim());
+        assertThat(holder.getQuery(), equalToCompressingWhiteSpace(expectedSparql));
     }
 
     @Test
@@ -638,14 +643,14 @@ public class SoqlQueryParserTest {
         final String soql = "SELECT p FROM Person p WHERE p.uri = :pUri";
         final String expectedSparql =
                 "SELECT ?pUri WHERE { ?pUri a " + strUri(Vocabulary.c_Person) + " . }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
     void testParseQueryWithIdentifierVariableInInExpression() {
         final String soql = "SELECT p FROM Person p WHERE p.uri IN :uris";
         final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . FILTER (?x IN (?uris)) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -653,8 +658,8 @@ public class SoqlQueryParserTest {
         final String soql = "SELECT p FROM Person p WHERE p.phone.uri IN :uris";
         final String expectedSparql =
                 "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . " +
-                        "?x <" + Vocabulary.p_p_hasPhone + "> ?phone . FILTER (?phone IN (?uris)) }";
-        parseAndAssertEquality(soql, expectedSparql);
+                        "?x <" + Vocabulary.p_p_hasPhone + "> ?pPhone . FILTER (?pPhone IN (?uris)) }";
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -663,7 +668,7 @@ public class SoqlQueryParserTest {
         final String expectedSparql =
                 "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . " +
                         "?x <" + Vocabulary.p_p_hasPhone + "> ?phoneUri . }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @ParameterizedTest
@@ -678,7 +683,7 @@ public class SoqlQueryParserTest {
                 "?x a " + strUri(Vocabulary.c_Person) + " . " +
                 "?x " + strUri(Vocabulary.p_p_username) + " ?pUsername . " +
                 "FILTER (" + sparqlFunction + "(?pUsername) = ?username) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -688,7 +693,7 @@ public class SoqlQueryParserTest {
                 "?x a " + strUri(Vocabulary.c_Person) + " . " +
                 "?x " + strUri(Vocabulary.p_p_username) + " ?pUsername . " +
                 "FILTER (REGEX(UCASE(?pUsername), ?value)) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -698,7 +703,7 @@ public class SoqlQueryParserTest {
                 "?x a " + strUri(Vocabulary.c_Person) + " . " +
                 "?x <" + Vocabulary.p_p_age + "> ?pAge . " +
                 "FILTER (?pAge >= ?minAge && ?pAge < ?maxAge) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -708,7 +713,7 @@ public class SoqlQueryParserTest {
                 "?x a " + strUri(Vocabulary.c_Person) + " . " +
                 "?x " + strUri(Vocabulary.p_p_username) + " ?pUsername . " +
                 "FILTER (STRLEN(?pUsername) <= ?minLength) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @ParameterizedTest
@@ -716,6 +721,7 @@ public class SoqlQueryParserTest {
             SoqlConstants.Functions.ABS + ", ABS",
             SoqlConstants.Functions.CEIL + ", CEIL",
             SoqlConstants.Functions.FLOOR + ", FLOOR",
+            SoqlConstants.Functions.ROUND + ", ROUND",
     })
     void testParseQueryWithNumericFunction(String soqlFunction, String sparqlFunction) {
         final String soql = "SELECT m FROM OWLClassM m WHERE " + soqlFunction + "(m.doubleAttribute) = :value";
@@ -723,7 +729,7 @@ public class SoqlQueryParserTest {
                 "?x a " + strUri(Vocabulary.c_OwlClassM) + " . " +
                 "?x " + strUri(Vocabulary.p_m_doubleAttribute) + " ?mDoubleAttribute . " +
                 "FILTER (" + sparqlFunction + "(?mDoubleAttribute) = ?value) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     private static String strUri(String uri) {
@@ -736,64 +742,64 @@ public class SoqlQueryParserTest {
         final String soqlIdSecond = "SELECT p FROM Person p WHERE p.username = :username AND p.uri = :uri";
         final String expectedSparql = "SELECT ?uri WHERE { ?uri a " + strUri(Vocabulary.c_Person) + " . " +
                 "?uri " + strUri(Vocabulary.p_p_username) + " ?username . }";
-        parseAndAssertEquality(soqlIdFirst, expectedSparql);
-        parseAndAssertEquality(soqlIdSecond, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soqlIdFirst);
+        parseAndAssertEquality(expectedSparql, soqlIdSecond);
     }
 
     @Test
     void parseQueryWithTypesAndMemberOf() {
         final String soql = "SELECT p FROM Person p WHERE :type MEMBER OF p.types";
         final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . ?x a ?type . }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
     void parseQueryWithMemberOfPluralAttribute() {
         final String soql = "SELECT f FROM OWLClassF f WHERE :aInstance MEMBER OF f.simpleSet";
         final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassF) + " . ?x " + strUri(Vocabulary.p_f_setAttribute) + " ?aInstance . }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
     void parseQuerySupportsCountWithProjectedAttribute() {
         final String soqlIdFirst = "SELECT COUNT(d.owlClassA) FROM OWLClassD d WHERE d.uri = :uri";
-        final String expectedSparql = "SELECT (COUNT(?owlClassA) AS ?count) WHERE { ?uri a " + strUri(Vocabulary.c_OwlClassD) + " . " +
-                "?uri " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . }";
-        parseAndAssertEquality(soqlIdFirst, expectedSparql);
+        final String expectedSparql = "SELECT (COUNT(?owlClassA) AS ?count) WHERE { ?x a " + strUri(Vocabulary.c_OwlClassD) + " . " +
+                "?x " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . }";
+        parseAndAssertEquality(expectedSparql, soqlIdFirst);
     }
 
     @Test
     void parseQuerySupportsDistinctCountWithProjectedAttribute() {
         final String soqlIdFirst = "SELECT DISTINCT COUNT(d.owlClassA) FROM OWLClassD d WHERE d.uri = :uri";
-        final String expectedSparql = "SELECT (COUNT(DISTINCT ?owlClassA) AS ?count) WHERE { ?uri a " + strUri(Vocabulary.c_OwlClassD) + " . " +
-                "?uri " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . }";
-        parseAndAssertEquality(soqlIdFirst, expectedSparql);
+        final String expectedSparql = "SELECT (COUNT(DISTINCT ?owlClassA) AS ?count) WHERE { ?x a " + strUri(Vocabulary.c_OwlClassD) + " . " +
+                "?x " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . }";
+        parseAndAssertEquality(expectedSparql, soqlIdFirst);
     }
 
     @Test
     void parseQueryWithProjectedAttribute() {
         final String soqlIdFirst = "SELECT d.owlClassA FROM OWLClassD d WHERE d.uri = :uri";
-        final String expectedSparql = "SELECT ?owlClassA WHERE { ?uri a " + strUri(Vocabulary.c_OwlClassD) + " . " +
-                "?uri " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . }";
-        parseAndAssertEquality(soqlIdFirst, expectedSparql);
+        final String expectedSparql = "SELECT ?owlClassA WHERE { ?x a " + strUri(Vocabulary.c_OwlClassD) + " . " +
+                "?x " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . }";
+        parseAndAssertEquality(expectedSparql, soqlIdFirst);
     }
 
     @Test
     void parseQueryWithProjectedAttributeAndRelatedAttribute() {
         final String soqlIdFirst = "SELECT d.owlClassA FROM OWLClassD d WHERE d.uri = :uri AND d.owlClassA.stringAttribute = :stringAtt";
-        final String expectedSparql = "SELECT ?owlClassA WHERE { ?uri a " + strUri(Vocabulary.c_OwlClassD) + " . " +
-                "?uri " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . " +
+        final String expectedSparql = "SELECT ?owlClassA WHERE { ?x a " + strUri(Vocabulary.c_OwlClassD) + " . " +
+                "?x " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . " +
                 "?owlClassA " + strUri(Vocabulary.p_a_stringAttribute) + " ?stringAtt . }";
-        parseAndAssertEquality(soqlIdFirst, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soqlIdFirst);
     }
 
     @Test
     void parseQueryWithDistinctProjectedAttributeAndRelatedAttribute() {
         final String soqlIdFirst = "SELECT DISTINCT d.owlClassA FROM OWLClassD d WHERE d.uri = :uri AND d.owlClassA.stringAttribute = :stringAtt";
-        final String expectedSparql = "SELECT DISTINCT ?owlClassA WHERE { ?uri a " + strUri(Vocabulary.c_OwlClassD) + " . " +
-                "?uri " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . " +
+        final String expectedSparql = "SELECT DISTINCT ?owlClassA WHERE { ?x a " + strUri(Vocabulary.c_OwlClassD) + " . " +
+                "?x " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . " +
                 "?owlClassA " + strUri(Vocabulary.p_a_stringAttribute) + " ?stringAtt . }";
-        parseAndAssertEquality(soqlIdFirst, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soqlIdFirst);
     }
 
     /**
@@ -806,8 +812,8 @@ public class SoqlQueryParserTest {
         final String expectedSparql = "SELECT ?uri WHERE { ?uri a " + strUri(Vocabulary.c_OwlClassD) + " . " +
                 "?uri " + strUri(Vocabulary.p_h_hasA) + " ?owlClassA . " +
                 "?owlClassA " + strUri(Vocabulary.p_a_stringAttribute) + " ?stringAtt . }";
-        parseAndAssertEquality(soqlIdFirst, expectedSparql);
-        parseAndAssertEquality(soqlIdSecond, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soqlIdFirst);
+        parseAndAssertEquality(expectedSparql, soqlIdSecond);
     }
 
     @Test
@@ -816,14 +822,14 @@ public class SoqlQueryParserTest {
         final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassU) + " . " +
                 "?x " + strUri(Vocabulary.P_U_SINGULAR_MULTILINGUAL_ATTRIBUTE) + " ?uSingularStringAtt . " +
                 "FILTER (lang(?uSingularStringAtt) = ?language) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
     void parseQuerySupportsCountById() {
         final String soql = "SELECT COUNT(a) FROM OWLClassA a WHERE a.uri = :id";
         final String expectedSparql = "SELECT (COUNT(?id) AS ?count) WHERE { ?id a " + strUri(Vocabulary.c_OwlClassA) + " . }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -838,7 +844,7 @@ public class SoqlQueryParserTest {
     void parseQueryTranslatesNotMemberOfToFilterNotExists() {
         final String soql = "SELECT p FROM Person p WHERE :disabledType NOT MEMBER OF p.types";
         final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . FILTER NOT EXISTS { ?x a ?disabledType . } }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     /**
@@ -848,7 +854,7 @@ public class SoqlQueryParserTest {
     void parseQueryTranslatesQueryUsingRootIdentifierAfterReferenceIdentifier() {
         final String soql = "SELECT DISTINCT h FROM OWLClassH h WHERE h.owlClassA.uri = :aUri AND h.owlClassG.uri = :gUri AND h.uri = :hUri";
         final String expectedSparql = "SELECT DISTINCT ?hUri WHERE { ?hUri a " + strUri(Vocabulary.c_OwlClassH) + " . ?hUri " + strUri(Vocabulary.p_h_hasA) + " ?aUri . ?hUri " + strUri(Vocabulary.p_h_hasG) + " ?gUri . }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -858,7 +864,7 @@ public class SoqlQueryParserTest {
                 "?x " + strUri(Vocabulary.p_p_hasPhone) + " ?phone . " +
                 "?phone " + strUri(Vocabulary.p_p_phoneNumber) + " ?phoneNumber . " +
                 "?phone " + strUri(Vocabulary.p_p_phoneBrand) + " ?brand . }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -871,7 +877,7 @@ public class SoqlQueryParserTest {
                 "?x " + strUri(Vocabulary.P_HAS_RDF_SEQ) + " " + containerVariable + " . " +
                 containerVariable + " " + hasElementVariable + " ?param . " +
                 "FILTER (STRSTARTS(STR(" + hasElementVariable + "), \"" + RDF.NAMESPACE + "_\")) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -879,7 +885,7 @@ public class SoqlQueryParserTest {
         final String soql = "SELECT p FROM Person p WHERE p.age > :age ORDER BY p.age";
         final String expectedSparql =
                 "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . ?x <" + Vocabulary.p_p_age + "> ?pAge . FILTER (?pAge > ?age) } ORDER BY ASC(?pAge)";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -887,7 +893,7 @@ public class SoqlQueryParserTest {
         final String soql = "SELECT p FROM Person p ORDER BY p.age ASC";
         final String expectedSparql =
                 "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . ?x <" + Vocabulary.p_p_age + "> ?age . } ORDER BY ASC(?age)";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -896,7 +902,7 @@ public class SoqlQueryParserTest {
         final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassC) + " . " +
                 "?x " + strUri(Vocabulary.P_HAS_RDF_COLLECTION) + "/(" + strUri(RDF.REST) + "*/" + strUri(RDF.FIRST) + ")* ?param . " +
                 "FILTER (!isBlank(?param)) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -905,7 +911,7 @@ public class SoqlQueryParserTest {
         final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassC) + " . " +
                 "?x " + strUri(Vocabulary.P_HAS_SIMPLE_LIST) + "/" + strUri(SequencesVocabulary.s_p_hasNext) + "* ?param . " +
                 "}";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -915,7 +921,7 @@ public class SoqlQueryParserTest {
                 "?x " + strUri(Vocabulary.P_HAS_REFERENCED_LIST) +
                 "/(" + strUri(SequencesVocabulary.s_p_hasNext) + "*/" + strUri(SequencesVocabulary.s_p_hasContents) + ") ?param . " +
                 "FILTER (!isBlank(?param)) }";
-        parseAndAssertEquality(soql, expectedSparql);
+        parseAndAssertEquality(expectedSparql, soql);
     }
 
     @Test
@@ -923,5 +929,63 @@ public class SoqlQueryParserTest {
         final String soql = "SELECT owlclassc FROM OWLClassC owlclassc WHERE :generatedName0 MEMBER OF owlclassc.rdfSeq AND :generatedName1 MEMBER OF owlclassc.rdfSeq";
         final String result = sut.parseQuery(soql).getQuery();
         assertThat(result, matchesPattern("(.*FILTER.*){2}"));
+    }
+
+    @Test
+    void parseQuerySupportsMultiParameterFunctions() {
+        final String soql = "SELECT p FROM Person p WHERE CONCAT(p.firstName, p.lastName) = :name";
+        final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_Person) + " . " +
+                "?x " + strUri(Vocabulary.p_p_firstName) + " ?pFirstName . " +
+                "?x " + strUri(Vocabulary.p_p_lastName) + " ?pLastName . " +
+                "FILTER (CONCAT(?pFirstName, ?pLastName) = ?name) }";
+        parseAndAssertEquality(expectedSparql, soql);
+    }
+
+    @Test
+    void parseQuerySupportsLangMatchesFunction() {
+        final String soql = "SELECT u FROM OWLClassU u WHERE LANGMATCHES(LANG(u.singularStringAtt), :language)";
+        final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassU) + " . " +
+                "?x " + strUri(Vocabulary.P_U_SINGULAR_MULTILINGUAL_ATTRIBUTE) + " ?uSingularStringAtt . " +
+                "FILTER (langMatches(lang(?uSingularStringAtt), ?language)) }";
+        parseAndAssertEquality(expectedSparql, soql);
+    }
+
+    @Test
+    void parseQuerySupportsReferencingAttributeInMultipleFunctions() {
+        final String soql = "SELECT a FROM OWLClassA a WHERE LENGTH(a.stringAttribute) < :minLength AND LANG(a.stringAttribute) = :lang";
+        final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassA) + " . " +
+                "?x " + strUri(Vocabulary.p_a_stringAttribute) + " ?aStringAttribute . " +
+                "FILTER (STRLEN(?aStringAttribute) < ?minLength && lang(?aStringAttribute) = ?lang) }";
+        parseAndAssertEquality(expectedSparql, soql);
+    }
+
+    @Test
+    void parseQuerySupportsLangMatchesWithLanguageArgumentValueOfAnotherAttribute() {
+        final String soql = "SELECT q FROM OWLClassQ q WHERE LANGMATCHES(LANG(q.label), q.parentString)";
+        final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassQ) + " . " +
+                "?x " + strUri(RDFS.LABEL) + " ?qLabel . " +
+                "?x " + strUri(Vocabulary.p_q_parentStringAttribute) + " ?qParentString . " +
+                "FILTER (langMatches(lang(?qLabel), ?qParentString)) }";
+        parseAndAssertEquality(expectedSparql, soql);
+    }
+
+    @Test
+    void parseQuerySupportsSelectionByIdentifierInCollection() {
+        final String soql = "SELECT m FROM OWLClassM m WHERE m.key IN :collection";
+        final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassM) + " . " +
+                "FILTER (?x IN (?collection)) }";
+        parseAndAssertEquality(expectedSparql, soql);
+    }
+
+    /**
+     * Bug#400
+     */
+    @Test
+    void parseQueryCorrectlyHandlesIdentifierReferencesRegardlessOfItsPositionInOtherAttributeReferences() {
+        final String soql = "SELECT m FROM OWLClassM m WHERE m.enumAttribute = :enum AND m.key IN :collection";
+        final String expectedSparql = "SELECT ?x WHERE { ?x a " + strUri(Vocabulary.c_OwlClassM) + " . " +
+                "?x " + strUri(Vocabulary.p_m_enumAttribute) + " ?enum . " +
+                "FILTER (?x IN (?collection)) }";
+        parseAndAssertEquality(expectedSparql, soql);
     }
 }

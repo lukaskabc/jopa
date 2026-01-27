@@ -38,6 +38,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -54,6 +56,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 
+@Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class CriteriaQueryTranslateQueryTest {
@@ -133,6 +136,44 @@ public class CriteriaQueryTranslateQueryTest {
         assertEquals(expectedSoqlQuery, generatedSoqlQuery);
     }
 
+    @Test
+    void translateQuerySupportsLangMatches() {
+        CriteriaQueryImpl<OWLClassA> query = cb.createQuery(OWLClassA.class);
+        Root<OWLClassA> root = query.from(OWLClassA.class);
+        query.select(root).where(cb.langMatches(root.getAttr("stringAttribute"), cb.parameter(String.class)));
+
+        final String generatedSoqlQuery = query.translateQuery(criteriaParameterFiller);
+        final String expectedSoqlQuery = "SELECT owlclassa FROM OWLClassA owlclassa WHERE LANGMATCHES(owlclassa.stringAttribute, :generatedName0)";
+        assertEquals(expectedSoqlQuery, generatedSoqlQuery);
+    }
+
+    @Test
+    void translateQuerySupportsSelectionByIdentifierInParameter() {
+        CriteriaQueryImpl<OWLClassM> query = cb.createQuery(OWLClassM.class);
+        Root<OWLClassM> root = query.from(OWLClassM.class);
+        final List<String> values = List.of("urn:test");
+        final List<Predicate> predicates = new ArrayList<>();
+        predicates.add(root.getAttr("key").in(values));
+        query.select(root).where(predicates);
+
+        final String generatedSoql = query.translateQuery(criteriaParameterFiller);
+        final String expectedSoql = "SELECT owlclassm FROM OWLClassM owlclassm WHERE owlclassm.key IN (:generatedName0)";
+        assertEquals(expectedSoql, generatedSoql);
+    }
+
+    @Test
+    void translateQuerySupportsSelectionOfRootInParameter() {
+        CriteriaQueryImpl<OWLClassM> query = cb.createQuery(OWLClassM.class);
+        Root<OWLClassM> root = query.from(OWLClassM.class);
+        final List<String> values = List.of("urn:test");
+        final List<Predicate> predicates = new ArrayList<>();
+        predicates.add(root.in(values));
+        query.select(root).where(predicates);
+
+        final String generatedSoql = query.translateQuery(criteriaParameterFiller);
+        final String expectedSoql = "SELECT owlclassm FROM OWLClassM owlclassm WHERE owlclassm.key IN (:generatedName0)";
+        assertEquals(expectedSoql, generatedSoql);
+    }
 
     @Nested
     class StringBasedPropertyQueryTests {

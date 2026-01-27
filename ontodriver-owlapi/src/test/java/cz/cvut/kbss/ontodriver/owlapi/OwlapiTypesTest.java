@@ -21,8 +21,10 @@ import cz.cvut.kbss.ontodriver.model.*;
 import cz.cvut.kbss.ontodriver.owlapi.util.Procedure;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.URI;
 import java.util.Collections;
@@ -32,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class OwlapiTypesTest {
 
     private static final NamedResource INDIVIDUAL = NamedResource.create("http://krizik.felk.cvut.cz/jopa#individual");
@@ -49,14 +52,13 @@ public class OwlapiTypesTest {
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
-        when(adapterMock.getTypesHandler()).thenReturn(typesHandlerMock);
         this.types = new OwlapiTypes(adapterMock, beforeMock, () -> {
         });
     }
 
     @Test
     public void getTypesReturnsTypes() throws Exception {
+        when(adapterMock.getTypesHandler()).thenReturn(typesHandlerMock);
         when(typesHandlerMock.getTypes(INDIVIDUAL, null, false)).thenReturn(Collections.singleton(
                 new AxiomImpl<>(INDIVIDUAL, Assertion.createClassAssertion(false),
                         new Value<>(INDIVIDUAL.getIdentifier()))));
@@ -69,6 +71,7 @@ public class OwlapiTypesTest {
 
     @Test
     public void addTypesAddsTypes() throws Exception {
+        when(adapterMock.getTypesHandler()).thenReturn(typesHandlerMock);
         final URI type = URI.create("http://addedType");
         types.addTypes(INDIVIDUAL, null, Collections.singleton(type));
 
@@ -92,6 +95,7 @@ public class OwlapiTypesTest {
 
     @Test
     public void removeTypesRemovesTypes() throws Exception {
+        when(adapterMock.getTypesHandler()).thenReturn(typesHandlerMock);
         final URI type = URI.create("http://addedType");
         types.removeTypes(INDIVIDUAL, null, Collections.singleton(type));
 

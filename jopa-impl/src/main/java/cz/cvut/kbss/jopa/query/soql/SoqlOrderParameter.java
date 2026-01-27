@@ -19,21 +19,13 @@ package cz.cvut.kbss.jopa.query.soql;
 
 class SoqlOrderParameter extends SoqlParameter {
 
-    private String orderingBy;
+    private final String orderingBy;
 
     private SoqlAttribute attribute;
 
     public SoqlOrderParameter(SoqlNode firstNode, String orderingBy) {
         super(firstNode);
         this.orderingBy = orderingBy.isEmpty() ? SoqlConstants.ASC : orderingBy;
-    }
-
-    public String getOrderingBy() {
-        return orderingBy;
-    }
-
-    public void setOrderingBy(String orderingBy) {
-        this.orderingBy = orderingBy;
     }
 
     public SoqlAttribute getAttribute() {
@@ -44,8 +36,8 @@ class SoqlOrderParameter extends SoqlParameter {
         this.attribute = attribute;
     }
 
-    public String getOrderByPart() {
-        String param = attribute.requiresFilter() ? getAsParam().substring(1) : attribute.getValue().substring(1);
+    public String getOrderByPart(String rootVariable) {
+        String param = attribute.requiresFilter() ? getAsParam(rootVariable).substring(1) : attribute.getValue().substring(1);
         return orderingBy + "(?" + param + ") ";
     }
 }

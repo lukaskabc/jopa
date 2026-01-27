@@ -19,17 +19,26 @@ package cz.cvut.kbss.ontodriver.owlapi;
 
 import cz.cvut.kbss.ontodriver.model.Axiom;
 import cz.cvut.kbss.ontodriver.model.NamedResource;
+import cz.cvut.kbss.ontodriver.owlapi.change.MutableAddAxiom;
+import cz.cvut.kbss.ontodriver.owlapi.change.MutableRemoveAxiom;
 import cz.cvut.kbss.ontodriver.owlapi.connector.OntologySnapshot;
 import cz.cvut.kbss.ontodriver.owlapi.environment.Generator;
 import cz.cvut.kbss.ontodriver.owlapi.environment.TestUtils;
-import cz.cvut.kbss.ontodriver.owlapi.change.MutableAddAxiom;
-import cz.cvut.kbss.ontodriver.owlapi.change.MutableRemoveAxiom;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.semanticweb.owlapi.model.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.semanticweb.owlapi.model.AddAxiom;
+import org.semanticweb.owlapi.model.AddImport;
+import org.semanticweb.owlapi.model.IRI;
+import org.semanticweb.owlapi.model.OWLClass;
+import org.semanticweb.owlapi.model.OWLClassAssertionAxiom;
+import org.semanticweb.owlapi.model.OWLDataFactory;
+import org.semanticweb.owlapi.model.OWLNamedIndividual;
+import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
 import org.semanticweb.owlapi.reasoner.NodeSet;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.impl.OWLClassNode;
@@ -37,7 +46,11 @@ import org.semanticweb.owlapi.reasoner.impl.OWLClassNodeSet;
 import uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl;
 
 import java.net.URI;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +60,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class TypesHandlerTest {
 
     private static final URI PK = URI.create("http://krizik.felk.cvut.cz/ontologies/jopa#Entity");
@@ -68,7 +82,6 @@ public class TypesHandlerTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         this.dataFactory = new OWLDataFactoryImpl();
         final OntologySnapshot snapshot = new OntologySnapshot(ontologyMock, managerMock, dataFactory,
                 reasonerMock);

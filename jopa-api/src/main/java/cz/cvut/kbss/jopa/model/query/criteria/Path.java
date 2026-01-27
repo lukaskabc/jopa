@@ -17,6 +17,7 @@
  */
 package cz.cvut.kbss.jopa.model.query.criteria;
 
+import cz.cvut.kbss.jopa.model.metamodel.Identifier;
 import cz.cvut.kbss.jopa.model.metamodel.SingularAttribute;
 
 public interface Path<X> extends Expression<X> {
@@ -37,6 +38,14 @@ public interface Path<X> extends Expression<X> {
      * @return path corresponding to the referenced attribute
      */
     <Y> Path<Y> getAttr(SingularAttribute<? super X, Y> attribute);
+
+    /**
+     * Create a path corresponding to the specified entity identifier.
+     *
+     * @param identifier Identifier attribute
+     * @return path corresponding to the identifier attribute
+     */
+    <Y> Path<Y> getAttr(Identifier<? super X, Y> identifier);
 
     /**
      * Return the parent "node" in the path or null if no parent.

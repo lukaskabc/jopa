@@ -26,11 +26,19 @@ import cz.cvut.kbss.jopa.model.MultilingualString;
 import cz.cvut.kbss.jopa.model.descriptors.Descriptor;
 import cz.cvut.kbss.jopa.model.descriptors.EntityDescriptor;
 import cz.cvut.kbss.ontodriver.descriptor.AxiomValueDescriptor;
-import cz.cvut.kbss.ontodriver.model.*;
+import cz.cvut.kbss.ontodriver.model.Assertion;
+import cz.cvut.kbss.ontodriver.model.Axiom;
+import cz.cvut.kbss.ontodriver.model.AxiomImpl;
+import cz.cvut.kbss.ontodriver.model.LangString;
+import cz.cvut.kbss.ontodriver.model.NamedResource;
+import cz.cvut.kbss.ontodriver.model.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.net.URI;
 import java.util.List;
@@ -40,8 +48,13 @@ import java.util.Set;
 import static cz.cvut.kbss.jopa.environment.utils.Generators.LANG;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class SingularMultilingualStringFieldStrategyTest {
 
     private static final URI ID = Generators.createIndividualIdentifier();
@@ -56,7 +69,6 @@ class SingularMultilingualStringFieldStrategyTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        MockitoAnnotations.openMocks(this);
         this.mocks = new MetamodelMocks();
     }
 

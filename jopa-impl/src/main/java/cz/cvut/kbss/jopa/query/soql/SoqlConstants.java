@@ -120,6 +120,11 @@ public class SoqlConstants {
         public static final String ABS = "ABS";
 
         /**
+         * Returns the number with no fractional part that is closest to the argument.
+         */
+        public static final String ROUND = "ROUND";
+
+        /**
          * Returns the smallest number with no fractional part that is not less than the argument.
          */
         public static final String CEIL = "CEIL";
@@ -130,9 +135,19 @@ public class SoqlConstants {
         public static final String FLOOR = "FLOOR";
 
         /**
-         * Returns language tag of a literal, if it has one. Returns an empty string if it has no language tag.
+         * Concatenates the provided arguments.
+         */
+        public static final String CONCAT = "CONCAT";
+
+        /**
+         * Returns language tag of a literal if it has one. Returns an empty string if it has no language tag.
          */
         public static final String LANG = "LANG";
+
+        /**
+         * Tests if a string language tag matches the specified argument.
+         */
+        public static final String LANG_MATCHES = "LANGMATCHES";
 
         private Functions() {
             throw new AssertionError();

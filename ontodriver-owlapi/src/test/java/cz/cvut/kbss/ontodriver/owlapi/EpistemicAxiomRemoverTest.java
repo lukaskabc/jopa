@@ -31,9 +31,10 @@ import cz.cvut.kbss.ontodriver.owlapi.environment.TestUtils;
 import cz.cvut.kbss.ontodriver.util.Vocabulary;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLAnnotationProperty;
 import org.semanticweb.owlapi.model.OWLClass;
@@ -70,6 +71,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+@ExtendWith(MockitoExtension.class)
 class EpistemicAxiomRemoverTest {
 
     private static final NamedResource SUBJECT = NamedResource.create("http://krizik.felk.cvut.cz/jopa#Individual");
@@ -90,7 +92,6 @@ class EpistemicAxiomRemoverTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        MockitoAnnotations.openMocks(this);
         final OntologySnapshot snapshot = TestUtils.initRealOntology(null);
         this.ontology = spy(snapshot.ontology());
         this.manager = spy(snapshot.ontologyManager());

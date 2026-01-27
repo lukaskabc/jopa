@@ -29,12 +29,14 @@ import cz.cvut.kbss.jopa.model.metamodel.Type;
 import cz.cvut.kbss.jopa.query.QueryType;
 import cz.cvut.kbss.jopa.query.sparql.SparqlConstants;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.RuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -42,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 public class SoqlQueryListener extends SoqlBaseListener {
@@ -62,6 +65,9 @@ public class SoqlQueryListener extends SoqlBaseListener {
 
     // keeps index of first object of SoqlAttribute after OR operator
     private final Set<SoqlAttribute> objectOfNextOr;
+
+    private final Stack<List<SoqlNode>> functionArguments = new Stack<>();
+    private int functionCallDepth = 0;
 
     private final List<SoqlOrderParameter> orderAttributes;
 
@@ -99,11 +105,7 @@ public class SoqlQueryListener extends SoqlBaseListener {
 
     @Override
     public void enterSimpleSubpath(SoqlParser.SimpleSubpathContext ctx) {
-        if (ctx.simpleSubpath() == null) {
-            return;
-        }
-
-        if (ctx.getChildCount() == 1) {
+        if (ctx.simpleSubpath() == null || ctx.getChildCount() == 1) {
             return;
         }
 
@@ -120,17 +122,13 @@ public class SoqlQueryListener extends SoqlBaseListener {
         }
 
         SoqlAttribute newAttr = new SoqlAttribute(owner);
-        if (owner.hasChild() && isIdentifier(owner, owner.getChild())) {
-            this.isInObjectIdentifierExpression = true;
-            if (projectedVariable.equals(owner.getValue()) && currentPointerIsNotAttributeReference()) {
-                attrPointer.setProjected(true);
-            } else {
+        if (owner.hasChild() && owner.getChild().isIdentifier()) {
+            newAttr.setValue(objectTypes.get(owner.getValue()));
+            if (Objects.equals(projectedVariable, owner.getValue())) {
                 newAttr.setProjected(true);
-                pushNewAttribute(newAttr);
             }
-        } else {
-            pushNewAttribute(newAttr);
         }
+        pushNewAttribute(newAttr);
     }
 
     private SoqlNode linkSimpleSubpath(ParserRuleContext ctx) {
@@ -141,14 +139,13 @@ public class SoqlQueryListener extends SoqlBaseListener {
             ctx = (ParserRuleContext) ctx.getChild(2);
             SoqlNode prevNode = currentNode;
             currentNode = new AttributeNode(prevNode, ctx.getChild(0).getText());
-            prevNode.setChild(currentNode);
+            prevNode.addChild(currentNode);
         }
         setIris(firstNode);
-        if (currentNode.getIri().isEmpty()) {
+        // Identifier can only be the last node in a subpath
+        if (isIdentifier(currentNode.getParent(), currentNode)) {
             this.isInObjectIdentifierExpression = true;
-            if (projectedVariable != null && projectedVariable.equals(firstNode.getValue()) && currentPointerIsNotAttributeReference()) {
-                attrPointer.setProjected(true);
-            }
+            currentNode.setIdentifier(true);
         }
         return firstNode;
     }
@@ -163,6 +160,9 @@ public class SoqlQueryListener extends SoqlBaseListener {
     }
 
     private void pushNewAttribute(SoqlAttribute myAttr) {
+        if (functionCallDepth > 0) {
+            functionArguments.peek().add(myAttr.getFirstNode());
+        }
         attributes.add(myAttr);
         this.attrPointer = myAttr;
     }
@@ -193,19 +193,32 @@ public class SoqlQueryListener extends SoqlBaseListener {
     }
 
     private boolean isIdentifier(SoqlNode objectNode, SoqlNode attributeNode) {
-        if (!objectTypes.containsKey(objectNode.getValue())) {
+        final List<SoqlNode> attributePath = new ArrayList<>();
+        SoqlNode rootNode = objectNode;
+        attributePath.add(rootNode);
+        while (rootNode.getParent() != null) {
+            rootNode = rootNode.getParent();
+            attributePath.add(rootNode);
+        }
+        Collections.reverse(attributePath);
+        if (!objectTypes.containsKey(rootNode.getValue())) {
             return false;
         }
-        final String objectName = objectTypes.get(objectNode.getValue());
+        final String objectName = objectTypes.get(rootNode.getValue());
         IdentifiableEntityType<?> entityType = getEntityType(objectName);
         if (entityType == null) {
             return false;
         }
+        for (SoqlNode n : attributePath.subList(1, attributePath.size())) {
+            final Attribute<?, ?> att = entityType.getAttribute(n.getValue());
+            assert att.isAssociation();
+            if (att.isCollection()) {
+                entityType = metamodel.entity(((PluralAttribute<?, ?, ?>) att).getElementType().getJavaType());
+            } else {
+                entityType = metamodel.entity(att.getJavaType());
+            }
+        }
         return entityType.getIdentifier().getName().equals(attributeNode.getValue());
-    }
-
-    private boolean currentPointerIsNotAttributeReference() {
-        return !attrPointer.getFirstNode().hasChild();
     }
 
     @Override
@@ -226,9 +239,6 @@ public class SoqlQueryListener extends SoqlBaseListener {
     @Override
     public void exitInExpression(SoqlParser.InExpressionContext ctx) {
         assert ctx.getChildCount() > 2;
-        if (isInObjectIdentifierExpression) {
-            pushNewAttribute(createSyntheticAttributeForEntityId());
-        }
         final ParseTree value = resolveInExpressionValue(ctx);
         if (ctx.NOT() != null) {
             attrPointer.setOperator(InOperator.notIn());
@@ -236,16 +246,8 @@ public class SoqlQueryListener extends SoqlBaseListener {
             attrPointer.setOperator(InOperator.in());
         }
         attrPointer.setValue(value.getText());
+        attrPointer.getFirstNode().setOccursInFilter(true);
         this.isInObjectIdentifierExpression = false;
-    }
-
-    private SoqlAttribute createSyntheticAttributeForEntityId() {
-        if (attrPointer.getFirstNode().hasChild()) {
-            attrPointer.getFirstNode().getChild().setChild(null);
-            return new SoqlAttribute(attrPointer.getFirstNode().getChild());
-        }
-
-        return new SoqlAttribute(new AttributeNode(rootVariable.substring(1)));
     }
 
     private ParseTree resolveInExpressionValue(SoqlParser.InExpressionContext ctx) {
@@ -275,6 +277,13 @@ public class SoqlQueryListener extends SoqlBaseListener {
         ParseTree whereClauseValue = ctx.getChild(0);
         attrPointer.setValue(whereClauseValue.getText());
         this.isInObjectIdentifierExpression = false;
+    }
+
+    @Override
+    public void exitInputParameter(SoqlParser.InputParameterContext ctx) {
+        if (functionCallDepth > 0) {
+            functionArguments.peek().add(new AttributeNode(ctx.getText().substring(1)));
+        }
     }
 
     @Override
@@ -323,17 +332,51 @@ public class SoqlQueryListener extends SoqlBaseListener {
     }
 
     @Override
+    public void enterFunctionsReturningStrings(SoqlParser.FunctionsReturningStringsContext ctx) {
+        functionArguments.push(new ArrayList<>());
+        functionCallDepth++;
+    }
+
+    @Override
     public void exitFunctionsReturningStrings(SoqlParser.FunctionsReturningStringsContext ctx) {
+        createFunctionNode(ctx);
+        functionCallDepth--;
+    }
+
+    private void createFunctionNode(RuleContext ctx) {
         final String functionName = ctx.getChild(0).getText();
-        final FunctionNode node = new FunctionNode(attrPointer.getFirstNode(), functionName);
-        attrPointer.setFirstNode(node);
+        final FunctionNode node = new FunctionNode(functionName, functionArguments.pop().stream()
+                                                                                  .peek(n -> n.setOccursInFilter(true))
+                                                                                  .toArray(SoqlNode[]::new));
+        node.getChildren().get(0).getSoqlAttribute().setFirstNode(node);
+        this.attrPointer = node.getSoqlAttribute();
+        if (functionCallDepth > 1) {
+            functionArguments.peek().add(node);
+        }
+    }
+
+    @Override
+    public void enterFunctionsReturningNumerics(SoqlParser.FunctionsReturningNumericsContext ctx) {
+        functionArguments.push(new ArrayList<>());
+        functionCallDepth++;
     }
 
     @Override
     public void exitFunctionsReturningNumerics(SoqlParser.FunctionsReturningNumericsContext ctx) {
-        final String functionName = ctx.getChild(0).getText();
-        final FunctionNode node = new FunctionNode(attrPointer.getFirstNode(), functionName);
-        attrPointer.setFirstNode(node);
+        createFunctionNode(ctx);
+        functionCallDepth--;
+    }
+
+    @Override
+    public void enterFunctionsReturningBoolean(SoqlParser.FunctionsReturningBooleanContext ctx) {
+        functionArguments.push(new ArrayList<>());
+        functionCallDepth++;
+    }
+
+    @Override
+    public void exitFunctionsReturningBoolean(SoqlParser.FunctionsReturningBooleanContext ctx) {
+        createFunctionNode(ctx);
+        functionCallDepth--;
     }
 
     @Override
@@ -343,7 +386,7 @@ public class SoqlQueryListener extends SoqlBaseListener {
         SoqlOrderParameter orderParam = new SoqlOrderParameter(firstNode, orderingBy);
         boolean attrSet = false;
         for (SoqlAttribute attr : attributes) {
-            if (attr.getAsParam().equals(orderParam.getAsParam())) {
+            if (attr.getAsParam(rootVariable).equals(orderParam.getAsParam(rootVariable))) {
                 orderParam.setAttribute(attr);
                 attrSet = true;
             }
@@ -364,7 +407,7 @@ public class SoqlQueryListener extends SoqlBaseListener {
         SoqlGroupParameter groupParam = new SoqlGroupParameter(firstNode);
         boolean attrSet = false;
         for (SoqlAttribute attr : attributes) {
-            if (attr.getAsParam().equals(groupParam.getAsParam())) {
+            if (attr.getAsParam(rootVariable).equals(groupParam.getAsParam(rootVariable))) {
                 groupParam.setAttribute(attr);
                 attrSet = true;
             }
@@ -385,17 +428,17 @@ public class SoqlQueryListener extends SoqlBaseListener {
         for (int i = 2; i < ctx.getChild(0).getChildCount(); i += 2) {
             SoqlNode prevNode = currentNode;
             currentNode = new AttributeNode(prevNode, ctx.getChild(0).getChild(i).getText());
-            prevNode.setChild(currentNode);
+            prevNode.addChild(currentNode);
         }
         setIris(firstNode);
         if (currentNode.getIri().isEmpty()) {
-            currentNode.getParent().setChild(null);
+            currentNode.getParent().clearChildren();
             this.isInObjectIdentifierExpression = true;
         }
         return firstNode;
     }
 
-    //Methods to help parse tree
+    // Methods to help parse the tree
     private String getOwnerFromParam(ParserRuleContext ctx) {
         return ctx.getChild(0).getChild(0).getText();
     }
@@ -594,7 +637,8 @@ public class SoqlQueryListener extends SoqlBaseListener {
             return "";
         }
         buildFilter.append("FILTER (");
-        buildFilter.append(toFilter.stream().map(SoqlAttribute::getFilterExpressions).flatMap(Collection::stream)
+        buildFilter.append(toFilter.stream().map(att -> att.getFilterExpressions(rootVariable))
+                                   .flatMap(Collection::stream)
                                    .collect(Collectors.joining(" && ")));
         buildFilter.append(") ");
         return buildFilter.toString();
@@ -624,7 +668,7 @@ public class SoqlQueryListener extends SoqlBaseListener {
     private String buildOrdering() {
         StringBuilder sb = new StringBuilder(SoqlConstants.ORDER_BY);
         for (SoqlOrderParameter orderParam : orderAttributes) {
-            sb.append(' ').append(orderParam.getOrderByPart());
+            sb.append(' ').append(orderParam.getOrderByPart(rootVariable));
         }
         return sb.toString();
     }
@@ -632,7 +676,7 @@ public class SoqlQueryListener extends SoqlBaseListener {
     private String buildGrouping() {
         StringBuilder sb = new StringBuilder(SoqlConstants.GROUP_BY);
         for (SoqlGroupParameter groupParam : groupAttributes) {
-            sb.append(' ').append(groupParam.getGroupByPart());
+            sb.append(' ').append(groupParam.getGroupByPart(rootVariable));
         }
         return sb.toString();
     }

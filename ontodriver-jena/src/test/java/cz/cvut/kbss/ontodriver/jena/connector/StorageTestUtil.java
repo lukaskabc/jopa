@@ -28,7 +28,9 @@ import org.apache.jena.vocabulary.RDFS;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.stream.Stream;
 
 import static org.apache.jena.rdf.model.ResourceFactory.createProperty;
 import static org.apache.jena.rdf.model.ResourceFactory.createResource;
@@ -64,8 +66,8 @@ class StorageTestUtil {
 
     static void deleteStorageDir(File directory) throws IOException {
         if (directory.exists()) {
-            Files.walk(directory.toPath())
-                 .sorted(Comparator.reverseOrder())
+            try (Stream<Path> s = Files.walk(directory.toPath())) {
+                s.sorted(Comparator.reverseOrder())
                  .forEach(path -> {
                      try {
                          Files.delete(path);
@@ -73,6 +75,7 @@ class StorageTestUtil {
                          throw new RuntimeException("Unable to delete file " + path, e);
                      }
                  });
+            }
         }
     }
 }

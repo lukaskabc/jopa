@@ -19,9 +19,13 @@ package cz.cvut.kbss.jopa.query.criteria;
 
 import cz.cvut.kbss.jopa.model.metamodel.EntityType;
 import cz.cvut.kbss.jopa.model.metamodel.Metamodel;
+import cz.cvut.kbss.jopa.model.query.criteria.Predicate;
+import cz.cvut.kbss.jopa.model.query.criteria.PredicateFactory;
 import cz.cvut.kbss.jopa.model.query.criteria.Root;
 import cz.cvut.kbss.jopa.query.criteria.expressions.AbstractPathExpression;
 import cz.cvut.kbss.jopa.model.query.criteria.CriteriaBuilder;
+
+import java.util.Collection;
 
 public class RootImpl<X> extends AbstractPathExpression<X> implements Root<X> {
 
@@ -42,5 +46,11 @@ public class RootImpl<X> extends AbstractPathExpression<X> implements Root<X> {
         } else {
             query.append(type.getSimpleName().toLowerCase());
         }
+    }
+
+    @Override
+    public Predicate in(Collection<?> values) {
+        final EntityType<X> et = getModel();
+        return ((PredicateFactory.In) cb.in(getAttr(et.getIdentifier()))).value(values);
     }
 }

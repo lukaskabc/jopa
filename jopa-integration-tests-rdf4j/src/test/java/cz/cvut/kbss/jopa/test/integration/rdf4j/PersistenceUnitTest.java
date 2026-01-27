@@ -45,9 +45,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class PersistenceUnitTest extends PersistenceUnitTestRunner {
 
@@ -110,10 +117,11 @@ class PersistenceUnitTest extends PersistenceUnitTestRunner {
     }
 
     private void recursivelyDeleteDirectory(File directory) throws IOException {
-        Files.walk(directory.toPath())
-                .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete);
+        try (Stream<Path> s = Files.walk(directory.toPath())) {
+            s.sorted(Comparator.reverseOrder())
+             .map(Path::toFile)
+             .forEach(File::delete);
+        }
     }
 
     @Test
@@ -128,7 +136,7 @@ class PersistenceUnitTest extends PersistenceUnitTestRunner {
                 vf.createIRI(Vocabulary.C_OWL_CLASS_A)));
         conn.add(vf.createStatement(vf.createIRI(entityA.getUri().toString()),
                 vf.createIRI(Vocabulary.P_A_STRING_ATTRIBUTE), vf.createLiteral(entityA.getStringAttribute(),
-                                                                                TestEnvironment.PERSISTENCE_LANGUAGE)));
+                        TestEnvironment.PERSISTENCE_LANGUAGE)));
         conn.close();
         final EntityManager newEm = em.getEntityManagerFactory().createEntityManager();
         try (newEm) {

@@ -68,7 +68,7 @@ public class QueryHintsHandler {
      *                  applied directly to it
      * @throws IllegalArgumentException If the hint value is not supported
      */
-    public static void apply(String hintName, Object hintValue, AbstractQuery query, Statement statement) {
+    static void apply(String hintName, Object hintValue, AbstractQuery query, Statement statement) {
         Hint.apply(hintName, hintValue, query, statement);
     }
 

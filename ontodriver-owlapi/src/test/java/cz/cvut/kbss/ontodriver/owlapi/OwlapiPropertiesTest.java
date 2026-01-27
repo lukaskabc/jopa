@@ -24,15 +24,27 @@ import cz.cvut.kbss.ontodriver.model.Value;
 import cz.cvut.kbss.ontodriver.owlapi.util.Procedure;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyMap;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class OwlapiPropertiesTest {
 
     private static final URI IDENTIFIER = URI.create("http://krizik.felk.cvut.cz/ontologies/jopa#Individual");
@@ -53,13 +65,12 @@ public class OwlapiPropertiesTest {
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
-        when(adapterMock.getPropertiesHandler()).thenReturn(handlerMock);
         this.properties = new OwlapiProperties(adapterMock, beforeMock, afterMock);
     }
 
     @Test
     public void getPropertiesChecksForConnectionActivity() throws Exception {
+        when(adapterMock.getPropertiesHandler()).thenReturn(handlerMock);
         final Collection<Axiom<?>> props = new ArrayList<>();
         when(handlerMock.getProperties(eq(INDIVIDUAL), anyBoolean())).thenReturn(props);
         final Collection<Axiom<?>> result = properties.getProperties(INDIVIDUAL, null, true);
@@ -69,6 +80,7 @@ public class OwlapiPropertiesTest {
 
     @Test
     public void addPropertiesCommitsTransactionIfTurnedOn() throws Exception {
+        when(adapterMock.getPropertiesHandler()).thenReturn(handlerMock);
         final Map<Assertion, Set<Value<?>>> props = Collections.singletonMap(
                 Assertion.createDataPropertyAssertion(URI.create("http://assertion"), false),
                 Collections.singleton(new Value<>("String")));
@@ -86,6 +98,7 @@ public class OwlapiPropertiesTest {
 
     @Test
     public void removePropertiesCommitsTransactionIfTurnedOn() throws Exception {
+        when(adapterMock.getPropertiesHandler()).thenReturn(handlerMock);
         final Map<Assertion, Set<Value<?>>> props = Collections.singletonMap(
                 Assertion.createDataPropertyAssertion(URI.create("http://assertion"), false),
                 Collections.singleton(new Value<>("String")));

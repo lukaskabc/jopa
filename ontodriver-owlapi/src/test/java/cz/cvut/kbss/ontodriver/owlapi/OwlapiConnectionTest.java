@@ -21,21 +21,36 @@ import cz.cvut.kbss.ontodriver.Lists;
 import cz.cvut.kbss.ontodriver.Properties;
 import cz.cvut.kbss.ontodriver.Types;
 import cz.cvut.kbss.ontodriver.descriptor.AxiomDescriptor;
-import cz.cvut.kbss.ontodriver.model.*;
+import cz.cvut.kbss.ontodriver.model.Assertion;
+import cz.cvut.kbss.ontodriver.model.Axiom;
+import cz.cvut.kbss.ontodriver.model.AxiomImpl;
+import cz.cvut.kbss.ontodriver.model.NamedResource;
+import cz.cvut.kbss.ontodriver.model.Value;
 import cz.cvut.kbss.ontodriver.owlapi.list.OwlapiLists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class OwlapiConnectionTest {
 
     @Mock
@@ -45,7 +60,6 @@ public class OwlapiConnectionTest {
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
         this.connection = new OwlapiConnection(adapterMock);
     }
 

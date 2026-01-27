@@ -28,8 +28,10 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Random;
+import java.util.stream.Stream;
 
 public class TestUtils {
 
@@ -61,8 +63,8 @@ public class TestUtils {
     }
 
     static void recursivelyDeleteDirectory(File directory) throws IOException {
-        Files.walk(directory.toPath())
-             .sorted(Comparator.reverseOrder())
+        try (Stream<Path> s = Files.walk(directory.toPath())) {
+            s.sorted(Comparator.reverseOrder())
              .forEach(path -> {
                  try {
                      Files.delete(path);
@@ -70,6 +72,7 @@ public class TestUtils {
                      throw new RuntimeException("Unable to delete file " + path, e);
                  }
              });
+        }
     }
 
     static void addAxiom(OWLAxiom axiom, OWL2JavaTransformer transformer) throws Exception {
