@@ -33,8 +33,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.join;
+import static org.codehaus.plexus.util.StringUtils.isNotBlank;
+import static org.codehaus.plexus.util.StringUtils.join;
 
 
 @Mojo(
