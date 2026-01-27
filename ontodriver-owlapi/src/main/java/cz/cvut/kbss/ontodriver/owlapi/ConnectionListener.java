@@ -17,8 +17,6 @@
  */
 package cz.cvut.kbss.ontodriver.owlapi;
 
-import cz.cvut.kbss.ontodriver.Connection;
-
 @FunctionalInterface
 interface ConnectionListener {
 

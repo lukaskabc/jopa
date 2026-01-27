@@ -30,8 +30,10 @@ import cz.cvut.kbss.ontodriver.model.NamedResource;
 import cz.cvut.kbss.ontodriver.model.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -42,6 +44,7 @@ import java.util.stream.IntStream;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class AxiomValueGathererTest {
 
     private static final NamedResource SUBJECT = NamedResource
@@ -65,11 +68,6 @@ class AxiomValueGathererTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        when(connectionMock.lists()).thenReturn(listsMock);
-        when(connectionMock.types()).thenReturn(typesMock);
-        when(connectionMock.properties()).thenReturn(propertiesMock);
-
         this.sut = new AxiomValueGatherer(SUBJECT, null);
     }
 
@@ -122,6 +120,9 @@ class AxiomValueGathererTest {
 
     @Test
     void testPersist() throws Exception {
+        when(connectionMock.lists()).thenReturn(listsMock);
+        when(connectionMock.types()).thenReturn(typesMock);
+        when(connectionMock.properties()).thenReturn(propertiesMock);
         addValue();
         final SimpleListValueDescriptor simpleD = mock(SimpleListValueDescriptor.class);
         final ReferencedListValueDescriptor referencedD = mock(ReferencedListValueDescriptor.class);
@@ -154,6 +155,9 @@ class AxiomValueGathererTest {
 
     @Test
     void testUpdate() throws Exception {
+        when(connectionMock.lists()).thenReturn(listsMock);
+        when(connectionMock.types()).thenReturn(typesMock);
+        when(connectionMock.properties()).thenReturn(propertiesMock);
         addValue();
         final SimpleListValueDescriptor simpleD = mock(SimpleListValueDescriptor.class);
         final ReferencedListValueDescriptor referencedD = mock(ReferencedListValueDescriptor.class);

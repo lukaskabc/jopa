@@ -19,21 +19,26 @@ package cz.cvut.kbss.ontodriver.owlapi;
 
 import cz.cvut.kbss.ontodriver.Connection;
 import cz.cvut.kbss.ontodriver.OntologyStorageProperties;
-import cz.cvut.kbss.ontodriver.config.DriverConfiguration;
 import cz.cvut.kbss.ontodriver.owlapi.connector.Connector;
 import cz.cvut.kbss.ontodriver.owlapi.connector.ConnectorFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
+@ExtendWith(MockitoExtension.class)
 public class OwlapiDriverTest {
 
     private static final OntologyStorageProperties STORAGE_PROPERTIES = OntologyStorageProperties.ontologyUri(
@@ -51,12 +56,9 @@ public class OwlapiDriverTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        MockitoAnnotations.openMocks(this);
         final Field instanceField = OwlapiDriver.class.getDeclaredField("connectorFactory");
         instanceField.setAccessible(true);
         this.factoryMock = mock(ConnectorFactory.class);
-        when(factoryMock.getConnector(any(DriverConfiguration.class))).thenReturn(connectorMock);
-        when(factoryMock.isOpen()).thenReturn(true);
         this.driver = new OwlapiDriver(STORAGE_PROPERTIES, Collections.emptyMap());
         instanceField.set(driver, factoryMock);
     }

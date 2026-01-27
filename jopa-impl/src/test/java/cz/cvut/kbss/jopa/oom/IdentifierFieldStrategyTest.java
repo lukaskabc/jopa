@@ -31,8 +31,11 @@ import cz.cvut.kbss.ontodriver.model.Assertion;
 import cz.cvut.kbss.ontodriver.model.NamedResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.net.URI;
 import java.util.Collections;
@@ -41,10 +44,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class IdentifierFieldStrategyTest {
 
-    private static final URI PK = Generators.createIndividualIdentifier();
-    private static final NamedResource INDIVIDUAL = NamedResource.create(PK);
+    private static final URI IDENTIFIER = Generators.createIndividualIdentifier();
+    private static final NamedResource INDIVIDUAL = NamedResource.create(IDENTIFIER);
 
 
     @Mock
@@ -58,7 +63,6 @@ public class IdentifierFieldStrategyTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        MockitoAnnotations.openMocks(this);
         final Configuration configuration = new Configuration(
                 Collections.singletonMap(JOPAPersistenceProperties.LANG, "en"));
         when(mapperMock.getConfiguration()).thenReturn(configuration);

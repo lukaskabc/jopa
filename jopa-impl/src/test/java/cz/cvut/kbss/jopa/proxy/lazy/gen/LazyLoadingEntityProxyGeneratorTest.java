@@ -169,6 +169,7 @@ class LazyLoadingEntityProxyGeneratorTest {
         ((LazyLoadingProxyPropertyAccessor) proxy).setPersistenceContext(uow);
         ((LazyLoadingProxyPropertyAccessor) proxy).setFieldSpec(fs);
         ((LazyLoadingProxyPropertyAccessor) proxy).setOwner(gOwner);
+        // Intentional call to equals
         assertFalse(proxy.equals(new OWLClassH(Generators.createIndividualIdentifier())));
         verify(uow).loadEntityField(gOwner, fs);
     }

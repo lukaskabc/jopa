@@ -19,6 +19,7 @@ package cz.cvut.kbss.ontodriver.jena;
 
 import cz.cvut.kbss.ontodriver.descriptor.AxiomDescriptor;
 import cz.cvut.kbss.ontodriver.descriptor.AxiomValueDescriptor;
+import cz.cvut.kbss.ontodriver.exception.OntoDriverException;
 import cz.cvut.kbss.ontodriver.jena.connector.InferredStorageConnector;
 import cz.cvut.kbss.ontodriver.jena.connector.StorageConnector;
 import cz.cvut.kbss.ontodriver.jena.connector.SubjectPredicateContext;
@@ -36,9 +37,10 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -54,13 +56,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyCollection;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class JenaAdapterTest {
 
     private static final NamedResource SUBJECT = NamedResource.create(Generator.generateUri());
@@ -76,7 +78,6 @@ class JenaAdapterTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         this.adapter = new JenaAdapter(connectorMock, inferredConnectorMock);
     }
 
@@ -222,7 +223,6 @@ class JenaAdapterTest {
         final Statement s = ResourceFactory
                 .createStatement(SUBJECT_RESOURCE, assertionToProperty(assertion),
                         ResourceFactory.createResource(Generator.generateUri().toString()));
-        when(connectorMock.find(any(), any(), any(), anyCollection())).thenReturn(Collections.singletonList(s));
         final URI newValue = Generator.generateUri();
         final AxiomValueDescriptor descriptor = new AxiomValueDescriptor(SUBJECT);
         descriptor.addAssertionValue(assertion, new Value<>(NamedResource.create(newValue)));
@@ -248,9 +248,11 @@ class JenaAdapterTest {
     }
 
     @Test
-    void createStatementStartsTransactionIfNotAlreadyActive() {
-        adapter.createStatement();
-        verify(connectorMock).begin();
+    void createStatementStartsTransactionIfNotAlreadyActive() throws OntoDriverException {
+        try (JenaStatement s = adapter.createStatement()) {
+            assertNotNull(s);
+            verify(connectorMock).begin();
+        }
     }
 
     @Test
@@ -263,9 +265,11 @@ class JenaAdapterTest {
     }
 
     @Test
-    void prepareStatementStartsTransactionIfNotAlreadyActive() {
-        adapter.prepareStatement("SELECT * WHERE {?x ?y ?z . }");
-        verify(connectorMock).begin();
+    void prepareStatementStartsTransactionIfNotAlreadyActive() throws OntoDriverException {
+        try (JenaPreparedStatement s = adapter.prepareStatement("SELECT * WHERE {?x ?y ?z . }")) {
+            assertNotNull(s);
+            verify(connectorMock).begin();
+        }
     }
 
     @Test
