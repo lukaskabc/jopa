@@ -1,5 +1,9 @@
 # JOPA - Change Log
 
+### 2.8.1 - 2026-01-28
+
+- Fix incorrect handling of entity identifier variable matching in the SOQL parser (Bug #407).
+
 ### 2.8.0 - 2026-01-27
 
 - Support langMatches in SOQL and Criteria API (Enhancement #395).
