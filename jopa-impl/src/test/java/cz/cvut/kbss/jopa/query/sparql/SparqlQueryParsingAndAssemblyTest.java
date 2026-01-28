@@ -302,6 +302,22 @@ public class SparqlQueryParsingAndAssemblyTest {
     }
 
     @Test
+    void parseAndAssembleAllowsVariableInMoveGraphStatement() {
+        this.sut = queryParser.parseQuery("MOVE GRAPH ?source TO ?destination");
+        final URI sourceGraphUri = Generators.createIndividualIdentifier();
+        final URI destinationGraphUri = Generators.createIndividualIdentifier();
+        sut.setParameter(sut.getParameter("source"), sourceGraphUri);
+        sut.setParameter(sut.getParameter("destination"), destinationGraphUri);
+
+        final String result = sut.assembleQuery();
+        final String expected = "MOVE GRAPH " +
+                IdentifierTransformer.stringifyIri(sourceGraphUri) +
+                " TO " +
+                IdentifierTransformer.stringifyIri(destinationGraphUri);
+        assertEquals(expected , result);
+    }
+
+    @Test
     void parseAndAssembleSupportsVariablesInTripleTerms() {
         final URI xUri = Generators.createIndividualIdentifier();
         this.sut = queryParser.parseQuery("SELECT ?annotationProperty ?annotationValue WHERE { << ?x ?property ?value >> ?annotationProperty ?annotationValue . }");
