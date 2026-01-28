@@ -183,15 +183,15 @@ create
     ;
 
 add
-    : ADD SILENT? graphOrDefault TO graphOrDefault
+    : ADD SILENT? graphOrVarOrDefault TO graphOrVarOrDefault
     ;
 
 move
-    : MOVE SILENT? graphOrDefault TO graphOrDefault
+    : MOVE SILENT? graphOrVarOrDefault TO graphOrVarOrDefault
     ;
 
 copy
-    : COPY SILENT? graphOrDefault TO graphOrDefault
+    : COPY SILENT? graphOrVarOrDefault TO graphOrVarOrDefault
     ;
 
 insertData
@@ -222,8 +222,8 @@ usingClause
     : USING NAMED? iri
     ;
 
-graphOrDefault
-    : DEFAULT | GRAPH? iri
+graphOrVarOrDefault
+    : DEFAULT | GRAPH? varOrIRI
     ;
 
 graphRef
