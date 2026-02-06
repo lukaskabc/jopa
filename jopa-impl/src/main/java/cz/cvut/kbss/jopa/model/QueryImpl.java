@@ -67,10 +67,10 @@ public class QueryImpl extends AbstractQuery implements Query {
         try {
             final List<?> list = getResultListImpl();
             if (list.isEmpty()) {
-                throw new NoResultException("No result found for query " + query);
+                throw new NoResultException("No result found for query '" + query + "'");
             }
             if (list.size() > 1) {
-                throw new NoUniqueResultException("Multiple results found for query " + query);
+                throw new NoUniqueResultException("Multiple results found for query '" + query + "'");
             }
             return list.get(0);
         } catch (OntoDriverException e) {

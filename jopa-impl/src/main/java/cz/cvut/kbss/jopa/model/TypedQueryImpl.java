@@ -83,10 +83,10 @@ public class TypedQueryImpl<X> extends AbstractQuery implements TypedQuery<X> {
         try {
             final List<X> res = getResultListImpl();
             if (res.isEmpty()) {
-                throw new NoResultException("No result found for query " + query);
+                throw new NoResultException("No result found for query '" + query + "'");
             }
             if (res.size() > 1) {
-                throw new NoUniqueResultException("Multiple results found for query " + query);
+                throw new NoUniqueResultException("Multiple results found for query '" + query + "'");
             }
             return res.get(0);
         } catch (OntoDriverException e) {
