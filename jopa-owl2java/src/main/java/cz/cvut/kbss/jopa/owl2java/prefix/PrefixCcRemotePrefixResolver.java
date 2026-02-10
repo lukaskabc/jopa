@@ -22,6 +22,7 @@ import org.semanticweb.owlapi.model.IRI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -55,6 +56,11 @@ public class PrefixCcRemotePrefixResolver implements RemotePrefixResolver {
             assert parts.length == 2;
             return Optional.of(parts[0]);
         } catch (IOException | InterruptedException e) {
+            if (e instanceof SSLException) {
+                // Suppress SSL exceptions on prefix.cc, its certificate has been expired as of 2026-01-01
+                LOG.trace("SSL exception on prefix.cc");
+                return Optional.empty();
+            }
             LOG.error("Unable to resolve prefix for ontology IRI <{}>.", ontologyIri, e);
             return Optional.empty();
         }
