@@ -1,5 +1,11 @@
 # JOPA - Change Log
 
+### 2.9.0 - 2026-02-10
+
+- Support mapping native SPARQL results directly to entities (Enhancement #394).
+- Allow outputting attribute mapped property IRIs into the static metamodel (Enhancement #408, #409, #410).
+- Support variables in `MOVE GRAPH` SPARQL queries (GH #413).
+
 ### 2.8.1 - 2026-01-28
 
 - Fix incorrect handling of entity identifier variable matching in the SOQL parser (Bug #407).
