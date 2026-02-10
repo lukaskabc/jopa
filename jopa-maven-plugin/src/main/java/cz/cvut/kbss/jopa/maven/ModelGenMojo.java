@@ -221,13 +221,17 @@ public class ModelGenMojo extends AbstractMojo {
             }
         }
         return resultList;
-
     }
 
     private void logTaskDiagnostics(DiagnosticCollector<JavaFileObject> diagnosticCollector) {
         for (Diagnostic<? extends JavaFileObject> diagnostic : diagnosticCollector.getDiagnostics()) {
             switch (diagnostic.getKind()) {
                 case ERROR:
+                    if ("compiler.err.cant.resolve.location".equals(diagnostic.getCode())) {
+                        // Suppress "symbol not found" errors, they are likely due to static metamodel classes
+                        // (which were not generated when the compilation task was executed) referenced by source code
+                        break;
+                    }
                     getLog().error(diagnostic.getMessage(null));
                     break;
                 case WARNING:   // Intentional fall-through

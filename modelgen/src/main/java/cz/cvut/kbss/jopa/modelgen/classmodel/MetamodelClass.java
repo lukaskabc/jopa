@@ -117,4 +117,9 @@ public class MetamodelClass {
         this.fields.add(field);
         field.getImports().stream().filter(imp -> !imports.contains(imp)).forEach(imports::add);
     }
+
+    @Override
+    public String toString() {
+        return "MetamodelClass{" + pckg + "." + name + '}';
+    }
 }
