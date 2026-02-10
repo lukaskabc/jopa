@@ -24,6 +24,7 @@ import cz.cvut.kbss.jopa.environment.OWLClassQ_;
 import cz.cvut.kbss.jopa.environment.QMappedSuperclass_;
 import cz.cvut.kbss.jopa.environment.Vocabulary;
 import cz.cvut.kbss.jopa.environment.utils.MetamodelMocks;
+import cz.cvut.kbss.jopa.environment.utils.TestLocal;
 import cz.cvut.kbss.jopa.exception.StaticMetamodelInitializationException;
 import cz.cvut.kbss.jopa.model.annotations.Id;
 import cz.cvut.kbss.jopa.model.annotations.MappedSuperclass;
@@ -122,6 +123,7 @@ class StaticMetamodelInitializerTest {
         assertThrows(StaticMetamodelInitializationException.class, () -> sut.initializeStaticMetamodel());
     }
 
+    @TestLocal
     @OWLClass(iri = Vocabulary.CLASS_BASE + "NoMatching")
     public static class NoMatching {
 
@@ -156,6 +158,7 @@ class StaticMetamodelInitializerTest {
         assertNull(NoStaticMetamodelAnnotation_.uri);
     }
 
+    @TestLocal
     @OWLClass(iri = Vocabulary.CLASS_BASE + "NoStaticMetamodelAnnotation")
     public static class NoStaticMetamodelAnnotation {
         @Id
@@ -179,6 +182,7 @@ class StaticMetamodelInitializerTest {
         assertNull(WithInheritedIdentifier_.uri);
     }
 
+    @TestLocal
     @OWLClass(iri = Vocabulary.CLASS_BASE + "WithInheritedIdentifier")
     public static class WithInheritedIdentifier {
 
@@ -205,6 +209,7 @@ class StaticMetamodelInitializerTest {
         assertNull(WithInheritedTypes_.types);
     }
 
+    @TestLocal
     @OWLClass(iri = Vocabulary.CLASS_BASE + "WithInheritedTypes")
     public static class WithInheritedTypes {
 
@@ -231,6 +236,7 @@ class StaticMetamodelInitializerTest {
         assertNull(WithInheritedProperties_.properties);
     }
 
+    @TestLocal
     @OWLClass(iri = Vocabulary.CLASS_BASE + "WithInheritedProperties")
     public static class WithInheritedProperties {
 
@@ -245,7 +251,8 @@ class StaticMetamodelInitializerTest {
     void initializeStaticMetamodelInitializesMetamodelForMappedSuperclasses() {
         when(metamodel.getEntities()).thenReturn(Collections.singleton(metamodelMocks.forOwlClassQ().entityType()));
         doReturn(new HashSet<>(Arrays.asList(metamodelMocks.forOwlClassQ().entityType(),
-                metamodelMocks.forOwlClassQ().entityType().getSupertypes().iterator().next()))).when(metamodel).getManagedTypes();
+                metamodelMocks.forOwlClassQ().entityType().getSupertypes().iterator().next()))).when(metamodel)
+                                                                                               .getManagedTypes();
         sut.initializeStaticMetamodel();
         assertEquals(metamodelMocks.forOwlClassQ().identifier(), QMappedSuperclass_.uri);
         assertEquals(metamodelMocks.forOwlClassQ().qLabelAtt(), QMappedSuperclass_.label);
@@ -278,12 +285,14 @@ class StaticMetamodelInitializerTest {
         assertThrows(StaticMetamodelInitializationException.class, () -> sut.initializeStaticMetamodel());
     }
 
+    @TestLocal
     @MappedSuperclass
     public static class SuperClass {
         @Id
         private URI uri;
     }
 
+    @TestLocal
     @OWLClass(iri = Vocabulary.CLASS_BASE + "SubClass")
     public static class SubClass extends SuperClass {
 
@@ -310,6 +319,7 @@ class StaticMetamodelInitializerTest {
         assertNull(SimpleClass_.test);
     }
 
+    @TestLocal
     @OWLClass(iri = Vocabulary.CLASS_BASE + "SimpleClass")
     public static class SimpleClass {
 
@@ -323,5 +333,52 @@ class StaticMetamodelInitializerTest {
         public static volatile Identifier<SimpleClass, URI> uri;
 
         private static String test;
+    }
+
+    @Test
+    void initializeStaticMetamodelInitializesPropertyIriFields() {
+        when(metamodel.getEntities()).thenReturn(Collections.singleton(metamodelMocks.forOwlClassA().entityType()));
+        sut.initializeStaticMetamodel();
+        assertEquals(metamodelMocks.forOwlClassA().stringAttribute().getIRI(), OWLClassA_.stringAttributePropertyIRI);
+    }
+
+    @Test
+    void initializeStaticMetamodelSkipsIriFieldsThatAreFinalAndInitializedByModelgen() throws Exception {
+        final EntityType<ClassWithInitializedStaticMetamodel> et = mock(EntityType.class);
+        final Identifier id = mock(Identifier.class);
+        when(id.getJavaField()).thenReturn(ClassWithInitializedStaticMetamodel.class.getDeclaredField("uri"));
+        when(et.getIdentifier()).thenReturn(id);
+        final SingularAttributeImpl labelAtt = mock(SingularAttributeImpl.class);
+        when(labelAtt.getJavaField()).thenReturn(ClassWithInitializedStaticMetamodel.class.getDeclaredField("label"));
+        when(labelAtt.getDeclaringType()).thenReturn(et);
+        when(labelAtt.getName()).thenReturn("label");
+        when(et.getDeclaredAttribute("label")).thenReturn(labelAtt);
+        when(et.getJavaType()).thenReturn(ClassWithInitializedStaticMetamodel.class);
+        when(metamodel.getEntities()).thenReturn(Collections.singleton(et));
+        sut.initializeStaticMetamodel();
+
+        assertEquals(Vocabulary.CLASS_BASE + "ClassWithInitializedStaticMetamodel", ClassWithInitializedStaticMetamodel_.entityClassIRI);
+        assertEquals(RDFS.LABEL, ClassWithInitializedStaticMetamodel_.labelPropertyIRI);
+    }
+
+    @TestLocal
+    @OWLClass(iri = Vocabulary.CLASS_BASE + "ClassWithInitializedStaticMetamodel")
+    public static class ClassWithInitializedStaticMetamodel {
+        @Id
+        private URI uri;
+
+        @OWLAnnotationProperty(iri = RDFS.LABEL)
+        private String label;
+    }
+
+    @StaticMetamodel(ClassWithInitializedStaticMetamodel.class)
+    public static class ClassWithInitializedStaticMetamodel_ {
+
+        public static final String entityClassIRI = Vocabulary.CLASS_BASE + "ClassWithInitializedStaticMetamodel";
+
+        public static final String labelPropertyIRI = RDFS.LABEL;
+
+        public static volatile Identifier<SimpleClass, URI> uri;
+        public static volatile SingularAttribute<ClassWithInitializedStaticMetamodel, String> label;
     }
 }

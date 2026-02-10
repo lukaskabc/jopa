@@ -599,14 +599,6 @@ public class EntityManagerImpl implements AbstractEntityManager, Wrapper {
     }
 
     @Override
-    protected void finalize() throws Throwable {
-        if (open) {
-            close();
-        }
-        super.finalize();
-    }
-
-    @Override
     public UnitOfWork getCurrentPersistenceContext() {
         if (persistenceContext == null) {
             this.persistenceContext = emf.getServerSession().acquireUnitOfWork(configuration);

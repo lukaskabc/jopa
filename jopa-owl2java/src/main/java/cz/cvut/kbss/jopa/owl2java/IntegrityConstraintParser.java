@@ -253,7 +253,7 @@ public class IntegrityConstraintParser implements OWLAxiomVisitor {
     }
 
     private static void notSupported(final OWLObject o) {
-        LOG.info("Ignoring Unsupported Axiom : {}", o);
+        LOG.debug("Ignoring Unsupported Axiom : {}", o);
     }
 
     private void processSubClassConstraintCandidate(final OWLClass subjClass,

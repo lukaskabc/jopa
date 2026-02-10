@@ -18,7 +18,7 @@
 package cz.cvut.kbss.jopa.modelgen;
 
 import cz.cvut.kbss.jopa.modelgen.classmodel.Field;
-import cz.cvut.kbss.jopa.modelgen.classmodel.MappingAnnotations;
+import cz.cvut.kbss.jopa.modelgen.classmodel.MappingAnnotation;
 import cz.cvut.kbss.jopa.modelgen.classmodel.MetamodelClass;
 import cz.cvut.kbss.jopa.modelgen.classmodel.Type;
 import cz.cvut.kbss.jopa.modelgen.exception.ModelGenException;
@@ -43,13 +43,13 @@ public class OutputFilesGenerator {
 
     private static final String INDENT = "    ";
 
-    private final String targetDir;
+    private final OutputConfig outputConfig;
     private final boolean debugMode;
 
     private final Messager messager;
 
-    public OutputFilesGenerator(String targetDir, boolean debugMode, Messager messager) {
-        this.targetDir = targetDir;
+    public OutputFilesGenerator(OutputConfig outputConfig, boolean debugMode, Messager messager) {
+        this.outputConfig = outputConfig;
         this.debugMode = debugMode;
         this.messager = messager;
     }
@@ -75,6 +75,7 @@ public class OutputFilesGenerator {
         final File targetFile = createTargetFile(cls);
         final StringBuilder content = new StringBuilder(generateClassPreamble(cls));
         generateClassIriField(cls).ifPresent(content::append);
+        generatePropertyIris(cls).ifPresent(content::append);
         content.append(generateAttributes(cls));
         content.append(generateClassSuffix());
         try {
@@ -86,7 +87,7 @@ public class OutputFilesGenerator {
     }
 
     private File createTargetFile(MetamodelClass cls) {
-        final StringBuilder fileName = new StringBuilder(targetDir);
+        final StringBuilder fileName = new StringBuilder(outputConfig.targetDir());
         fileName.append("/");
         String pack = cls.getPckg();
         while (pack.contains(".")) {
@@ -115,12 +116,12 @@ public class OutputFilesGenerator {
 
     public String generateClassPreamble(MetamodelClass cls) {
         String extend = "";
-        if (!cls.getExtend().isEmpty()) {
+        if (!cls.getSuperClass().isEmpty()) {
             extend = "extends ";
-            if (cls.getExtend().contains(".")) {
-                extend += cls.getExtend().substring(cls.getExtend().lastIndexOf(".") + 1) + "_ ";
+            if (cls.getSuperClass().contains(".")) {
+                extend += cls.getSuperClass().substring(cls.getSuperClass().lastIndexOf(".") + 1) + "_ ";
             } else {
-                extend += cls.getExtend();
+                extend += cls.getSuperClass();
             }
         }
         StringBuilder sbOut = new StringBuilder();
@@ -130,14 +131,8 @@ public class OutputFilesGenerator {
                  .append(cls.getPckg())
                  .append(";\n\n");
         }
-        cls.getImports().forEach(imp -> sbOut.append("import ")
-                                             .append(imp)
-                                             .append(";\n"));
-        if (!cls.getExtend().isEmpty()) {
-            sbOut.append("import ")
-                 .append(cls.getExtend())
-                 .append("_;\n");
-        }
+        generateImports(cls, sbOut);
+
         sbOut.append("\n@Generated(value = \"")
              .append("cz.cvut.kbss.jopa.modelgen.ModelGenProcessor\")\n")
              .append("@StaticMetamodel(")
@@ -151,11 +146,68 @@ public class OutputFilesGenerator {
         return sbOut.toString();
     }
 
-    private static Optional<String> generateClassIriField(MetamodelClass cls) {
+    private void generateImports(MetamodelClass cls, StringBuilder sbOut) {
+        if (!outputConfig.outputIriAsString() && (cls.isEntityClass() || !cls.getFields().isEmpty())) {
+            sbOut.append("import cz.cvut.kbss.jopa.model.IRI;\n");
+        }
+        cls.getImports().forEach(imp -> sbOut.append("import ").append(imp).append(";\n"));
+        if (!cls.getSuperClass().isEmpty()) {
+            sbOut.append("import ").append(cls.getSuperClass()).append("_;\n");
+        }
+    }
+
+    private Optional<String> generateClassIriField(MetamodelClass cls) {
         if (cls.isEntityClass()) {
-            return Optional.of(INDENT + "public static volatile IRI entityClassIRI;\n\n");
+            if (outputConfig.initializeIris()) {
+                return Optional.of(INDENT + "public static final " + iriType() + " entityClassIRI = " + iriValue(cls.getClassIri()) + ";\n\n");
+            } else {
+                return Optional.of(INDENT + "public static volatile " + iriType() + " entityClassIRI;\n\n");
+            }
         }
         return Optional.empty();
+    }
+
+    private String iriType() {
+        return outputConfig.outputIriAsString() ? "String" : "IRI";
+    }
+
+    private String iriValue(String iri) {
+        if (iri.charAt(0) == '\"' && iri.charAt(iri.length() - 1) == '\"') {
+            iri = iri.substring(1, iri.length() - 1);
+        }
+        return outputConfig.outputIriAsString() ? "\"" + iri + "\"" : "IRI.create(\"" + iri + "\")";
+    }
+
+    private Optional<String> generatePropertyIris(MetamodelClass cls) {
+        if (!outputConfig.outputPropertyIris()) {
+            return Optional.empty();
+        }
+        final StringBuilder sb = new StringBuilder();
+        for (Field field : cls.getFields()) {
+            if (field.isAnnotatedWith(MappingAnnotation.DATA_PROPERTY)
+                    || field.isAnnotatedWith(MappingAnnotation.OBJECT_PROPERTY)
+                    || field.isAnnotatedWith(MappingAnnotation.ANNOTATION_PROPERTY)) {
+                if (outputConfig.initializeIris()) {
+                    sb.append(INDENT)
+                      .append("public static final ")
+                      .append(iriType())
+                      .append(' ')
+                      .append(field.getName())
+                      .append("PropertyIRI = ")
+                      .append(iriValue(field.getPropertyIri()))
+                      .append(";\n");
+                } else {
+                    sb.append(INDENT)
+                      .append("public static volatile ")
+                      .append(iriType())
+                      .append(' ')
+                      .append(field.getName())
+                      .append("PropertyIRI;\n");
+                }
+            }
+        }
+        sb.append('\n');
+        return Optional.of(sb.toString());
     }
 
     private static String generateAttributes(MetamodelClass cls) {
@@ -164,14 +216,14 @@ public class OutputFilesGenerator {
             final String declaringClass = field.getParentName().substring(field.getParentName().lastIndexOf('.') + 1);
             attributes.append(INDENT + "public static volatile ");
             //@Id
-            if (isAnnotatedWith(field, MappingAnnotations.ID)) {
+            if (field.isAnnotatedWith(MappingAnnotation.ID)) {
                 attributes.append("Identifier<")
                           .append(declaringClass)
                           .append(", ")
                           .append(field.getType().getTypeName()
                                        .substring(field.getType().getTypeName().lastIndexOf(".") + 1));
                 //@Types
-            } else if (isAnnotatedWith(field, MappingAnnotations.TYPES)) {
+            } else if (field.isAnnotatedWith(MappingAnnotation.TYPES)) {
                 attributes.append("TypesSpecification<")
                           .append(declaringClass)
                           .append(", ");
@@ -181,7 +233,7 @@ public class OutputFilesGenerator {
                     attributes.append(field.getType().getTypes().get(0).getSimpleName());
                 }
                 //@Properties
-            } else if (isAnnotatedWith(field, MappingAnnotations.PROPERTIES)) {
+            } else if (field.isAnnotatedWith(MappingAnnotation.PROPERTIES)) {
                 attributes.append("PropertiesSpecification<")
                           .append(declaringClass)
                           .append(", ");
@@ -196,9 +248,9 @@ public class OutputFilesGenerator {
                               .append(", ")
                               .append(type.getTypes().get(1).getTypes().get(0).getSimpleName());
                 }
-            } else if (isAnnotatedWith(field, MappingAnnotations.DATA_PROPERTY)
-                    || isAnnotatedWith(field, MappingAnnotations.OBJECT_PROPERTY)
-                    || isAnnotatedWith(field, MappingAnnotations.ANNOTATION_PROPERTY)) {
+            } else if (field.isAnnotatedWith(MappingAnnotation.DATA_PROPERTY)
+                    || field.isAnnotatedWith(MappingAnnotation.OBJECT_PROPERTY)
+                    || field.isAnnotatedWith(MappingAnnotation.ANNOTATION_PROPERTY)) {
                 Type type = field.getType();
                 if (type.getIsSimple()) {
                     attributes.append("SingularAttribute<")
@@ -226,26 +278,5 @@ public class OutputFilesGenerator {
 
     private static String generateClassSuffix() {
         return "}";
-    }
-
-    /**
-     * Checking method whether Field has at least one of the given annotations.
-     *
-     * @param field              Field to check
-     * @param mappingAnnotations Annotations for which to check
-     * @return {@code true} if the field is annotated with at least one of the mapping annotations, {@code false}
-     * otherwise
-     */
-    static boolean isAnnotatedWith(Field field, MappingAnnotations mappingAnnotations) {
-        List<MappingAnnotations> annotations = field.getAnnotatedWith();
-        if (annotations.isEmpty()) {
-            return false;
-        }
-        for (MappingAnnotations an : annotations) {
-            if (an.equals(mappingAnnotations)) {
-                return true;
-            }
-        }
-        return false;
     }
 }

@@ -40,16 +40,22 @@ class ModelGenProcessorTests {
     private static final String OUTPUT_DIRECTORY = "target/generated-test-sources/static-metamodel";
 
     @AfterEach
-    void deleteSMClass() {
-        File file = new File(OUTPUT_DIRECTORY + "/cz/test/ex/TestingClassOWL_.java");
-        if (file.exists()) {
-            file.delete();
-        }
+    void deleteSMClass() throws IOException {
+        deleteTestFile(OUTPUT_DIRECTORY + "/cz/test/ex/TestingClassOWL_.java");
+    }
+
+    static String readFileAsString(File file) throws IOException {
+        return String.join("\n", Files.readAllLines(file.toPath(), StandardCharsets.UTF_8));
+    }
+
+    static void deleteTestFile(String path) throws IOException {
+        File file = new File(path);
+        Files.deleteIfExists(file.toPath());
     }
 
     @Test
     void metamodelGenerationProducesCompilableStaticMetamodelClasses() throws Exception {
-        List<String> options = List.of("-AoutputDirectory=" + OUTPUT_DIRECTORY, "-AdebugOption=" + "true");
+        List<String> options = List.of("-AoutputDirectory=" + OUTPUT_DIRECTORY, "-AdebugOption=true");
         Compilation compilation = javac()
                 .withProcessors(new ModelGenProcessor()).withOptions(options)
                 .compile(JavaFileObjects.forSourceLines("cz.test.ex.TestingClassOWL", readFileAsString(
@@ -72,10 +78,6 @@ class ModelGenProcessorTests {
                 readFileAsString(new File(OUTPUT_DIRECTORY + "/cz/test/ex/TestingClassOWL_.java")));
     }
 
-    static String readFileAsString(File file) throws IOException {
-        return String.join("\n", Files.readAllLines(file.toPath(), StandardCharsets.UTF_8));
-    }
-
     @Test
     void metamodelGenerationHandlesReferenceToConstantInEntityClass() throws Exception {
         List<String> options = List.of("-AoutputDirectory=" + OUTPUT_DIRECTORY, "-AdebugOption=" + "true");
@@ -91,6 +93,5 @@ class ModelGenProcessorTests {
                         readFileAsString(new File(OUTPUT_DIRECTORY + "/cz/test/ex/TestingClassWithContext_.java"))));
 
         assertThat(staticMetamodelCompilation).succeededWithoutWarnings();
-
     }
 }

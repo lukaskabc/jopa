@@ -77,9 +77,9 @@ public class EntityManagerFactoryImpl implements EntityManagerFactory, Persisten
     }
 
     private MetamodelImpl initMetamodel() {
-        final MetamodelImpl metamodel = new MetamodelImpl(configuration);
-        metamodel.build(new PersistenceUnitClassFinder());
-        return metamodel;
+        final MetamodelImpl newMetamodel = new MetamodelImpl(configuration);
+        newMetamodel.build(new PersistenceUnitClassFinder());
+        return newMetamodel;
     }
 
     private EntityDescriptorFactory initDescriptorFactory() {

@@ -250,4 +250,9 @@ public class TokenStreamSparqlQueryHolder implements QueryHolder {
     public QueryAttributes getQueryAttributes() {
         return queryAttributes;
     }
+
+    @Override
+    public String toString() {
+        return assembleQuery();
+    }
 }

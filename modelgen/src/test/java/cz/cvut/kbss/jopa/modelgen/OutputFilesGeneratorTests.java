@@ -17,173 +17,225 @@
  */
 package cz.cvut.kbss.jopa.modelgen;
 
+import cz.cvut.kbss.jopa.model.annotations.OWLAnnotationProperty;
+import cz.cvut.kbss.jopa.model.annotations.OWLClass;
+import cz.cvut.kbss.jopa.model.annotations.OWLDataProperty;
+import cz.cvut.kbss.jopa.model.annotations.OWLObjectProperty;
 import cz.cvut.kbss.jopa.modelgen.classmodel.Field;
-import cz.cvut.kbss.jopa.modelgen.classmodel.MappingAnnotations;
+import cz.cvut.kbss.jopa.modelgen.classmodel.MappingAnnotation;
 import cz.cvut.kbss.jopa.modelgen.classmodel.MetamodelClass;
 import cz.cvut.kbss.jopa.modelgen.classmodel.Type;
 import cz.test.ex.TestingClassOWL;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import static cz.cvut.kbss.jopa.modelgen.ModelGenProcessorTests.deleteTestFile;
 import static cz.cvut.kbss.jopa.modelgen.ModelGenProcessorTests.readFileAsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 class OutputFilesGeneratorTests {
 
-    private static String actualResult = "";
+    private static final String OUTPUT_FILE = "./src/test/java/cz/test/ex/TestingClassOWL_.java";
 
-    @BeforeAll
-    static void createSMClass() throws IOException {
-        MetamodelClass cl = new MetamodelClass();
+    private MetamodelClass metamodelClass;
+    private Field objectProperty;
+    private Field dataListProperty;
+    private Field dataSetProperty;
+
+    @BeforeEach
+    void createSMClass() {
+        this.metamodelClass = new MetamodelClass();
         Class<TestingClassOWL> testingClass = TestingClassOWL.class;
-        cl.setName(testingClass.getSimpleName());
-        cl.setPckg(testingClass.getPackage().getName());
-        cl.getImports().add(testingClass.getName());
-        cl.makeEntityClass();
-        cl.setExtend("");
+        metamodelClass.setName(testingClass.getSimpleName());
+        metamodelClass.setPckg(testingClass.getPackage().getName());
+        metamodelClass.getImports().add(testingClass.getName());
+        metamodelClass.setSuperClass("");
+        metamodelClass.setClassIri(TestingClassOWL.class.getAnnotation(OWLClass.class).iri());
 
-        Field field1 = new Field();
-        field1.setAnnotatedWith(Collections.singletonList(MappingAnnotations.ID));
-        field1.setName("uri");
-        field1.setParentName("cz.test.ex.TestingClassOWL");
-        Type type1 = new Type();
-        type1.setTypeName("Test");
-        type1.setSimpleName("Test");
-        field1.setType(type1);
-        cl.addField(field1);
+        Field idField = new Field();
+        idField.setAnnotatedWith(MappingAnnotation.ID);
+        idField.setName("uri");
+        idField.setParentName("cz.test.ex.TestingClassOWL");
+        Type idType = new Type(URI.class.getName(), URI.class.getSimpleName());
+        idField.setType(idType);
+        metamodelClass.addField(idField);
 
-        Field field2 = new Field();
-        field2.setAnnotatedWith(Collections.singletonList(MappingAnnotations.OBJECT_PROPERTY));
-        field2.setName("object");
-        field2.setParentName("cz.test.ex.TestingClassOWL");
-        field2.setType(type1);
-        cl.addField(field2);
+        this.objectProperty = new Field();
+        objectProperty.setAnnotatedWith(MappingAnnotation.OBJECT_PROPERTY);
+        objectProperty.setName("object");
+        objectProperty.setParentName("cz.test.ex.TestingClassOWL");
+        objectProperty.setPropertyIri(TestingClassOWL.field("testingClassOWL").getAnnotation(OWLObjectProperty.class)
+                                                     .iri());
+        objectProperty.setType(new Type(TestingClassOWL.class.getName(), TestingClassOWL.class.getSimpleName()));
+        metamodelClass.addField(objectProperty);
 
-        Field field3 = new Field();
-        field3.setAnnotatedWith(Collections.singletonList(MappingAnnotations.TYPES));
-        field3.setName("types");
-        field3.setParentName("cz.test.ex.TestingClassOWL");
-        field3.setType(type1);
-        cl.addField(field3);
+        Field typesField = new Field();
+        typesField.setAnnotatedWith(MappingAnnotation.TYPES);
+        typesField.setName("types");
+        typesField.setParentName("cz.test.ex.TestingClassOWL");
+        typesField.setType(idType);
+        metamodelClass.addField(typesField);
 
-        Field field5 = new Field();
-        field5.setAnnotatedWith(Collections.singletonList(MappingAnnotations.DATA_PROPERTY));
-        field5.setName("dataList");
-        field5.setParentName("cz.test.ex.TestingClassOWL");
-        Type type5 = new Type();
-        type5.setTypeName(List.class.getName());
-        type5.setSimpleName(List.class.getSimpleName());
-        type5.setIsSimple(false);
-        field5.setType(type5);
-        type5.setTypes(Collections.singletonList(type1));
-        field5.setType(type5);
-        cl.addField(field5);
+        this.dataListProperty = new Field();
+        dataListProperty.setAnnotatedWith(MappingAnnotation.DATA_PROPERTY);
+        dataListProperty.setName("dataList");
+        dataListProperty.setParentName("cz.test.ex.TestingClassOWL");
+        dataListProperty.setPropertyIri(TestingClassOWL.field("listAttribute").getAnnotation(OWLDataProperty.class)
+                                                       .iri());
+        Type listType = new Type(List.class.getName(), List.class.getSimpleName());
+        listType.setIsSimple(false);
+        dataListProperty.setType(listType);
+        listType.setTypes(Collections.singletonList(new Type(String.class.getName(), String.class.getSimpleName())));
+        dataListProperty.setType(listType);
+        metamodelClass.addField(dataListProperty);
 
-        Field field6 = new Field();
-        field6.setAnnotatedWith(Collections.singletonList(MappingAnnotations.DATA_PROPERTY));
-        field6.setName("dataSet");
-        field6.setParentName("cz.test.ex.TestingClassOWL");
-        Type type6 = new Type();
-        type6.setTypeName(Set.class.getName());
-        type6.setSimpleName(Set.class.getSimpleName());
-        type6.setIsSimple(false);
-        field6.setType(type6);
-        type6.setTypes(Collections.singletonList(type1));
-        field6.setType(type6);
-        cl.addField(field6);
+        this.dataSetProperty = new Field();
+        dataSetProperty.setAnnotatedWith(MappingAnnotation.ANNOTATION_PROPERTY);
+        dataSetProperty.setName("dataSet");
+        dataSetProperty.setParentName("cz.test.ex.TestingClassOWL");
+        dataSetProperty.setPropertyIri(TestingClassOWL.field("setAttribute").getAnnotation(OWLAnnotationProperty.class)
+                                                      .iri());
+        Type setType = new Type(Set.class.getName(), Set.class.getSimpleName());
+        setType.setIsSimple(false);
+        dataSetProperty.setType(setType);
+        setType.setTypes(Collections.singletonList(new Type(String.class.getName(), String.class.getSimpleName())));
+        dataSetProperty.setType(setType);
+        metamodelClass.addField(dataSetProperty);
 
-        Field field8 = new Field();
-        field8.setAnnotatedWith(Collections.singletonList(MappingAnnotations.PROPERTIES));
-        field8.setName("properties");
-        field8.setParentName("cz.test.ex.TestingClassOWL");
-        field8.setType(type6);
-        type6.setTypes(Collections.singletonList(type1));
-        field8.setType(type6);
-        cl.addField(field8);
-
-        new OutputFilesGenerator("./src/test/java", false, null).generateOutputFiles(List.of(cl));
-
-        actualResult = readFileAsString(new File("./src/test/java/cz/test/ex/TestingClassOWL_.java"));
-    }
-
-
-    @AfterAll
-    static void deleteSMClass() {
-        File file = new File("./src/test/java/cz/test/ex/TestingClassOWL_.java");
-        file.delete();
-    }
-
-    @Test
-    void isAnnotatedWithSuccessTest() {
-        Field field = new Field();
-        assertFalse(OutputFilesGenerator.isAnnotatedWith(field, null));
-
-        field.setAnnotatedWith(MappingAnnotations.getAll());
-
-        assertTrue(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.ID));
-        assertTrue(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.PROPERTIES));
-        assertTrue(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.TYPES));
-        assertTrue(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.OBJECT_PROPERTY));
-        assertTrue(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.ANNOTATION_PROPERTY));
-        assertTrue(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.DATA_PROPERTY));
-    }
-
-    @Test
-    void isAnnotatedWithFailTest() {
-        Field field = new Field();
-        assertFalse(OutputFilesGenerator.isAnnotatedWith(field, null));
-
-        field.setAnnotatedWith(Collections.singletonList(MappingAnnotations.ID));
-        assertFalse(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.PROPERTIES));
-        assertFalse(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.TYPES));
-        assertFalse(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.OBJECT_PROPERTY));
-        assertFalse(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.ANNOTATION_PROPERTY));
-        assertFalse(OutputFilesGenerator.isAnnotatedWith(field, MappingAnnotations.DATA_PROPERTY));
+        Field propertiesField = new Field();
+        propertiesField.setAnnotatedWith(MappingAnnotation.PROPERTIES);
+        propertiesField.setName("properties");
+        propertiesField.setParentName("cz.test.ex.TestingClassOWL");
+        final Type propsType = new Type(Map.class.getName(), Map.class.getSimpleName());
+        propertiesField.setType(propsType);
+        propsType.setTypes(List.of(new Type(String.class.getName(), String.class.getSimpleName()), setType));
+        metamodelClass.addField(propertiesField);
     }
 
     @Nested
-    class GenerateOutputFilesTest {
+    class BasicGeneratedOutputTest {
+
+        @AfterEach
+        void tearDown() throws IOException {
+            deleteTestFile(OUTPUT_FILE);
+        }
 
         @Test
-        void containsClassIri() {
+        void containsAllMetamodelFields() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", false, false, false), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
+            assertThat(actualResult, containsString("public static volatile Identifier<TestingClassOWL, URI> uri;"));
+            assertThat(actualResult, containsString("public static volatile SingularAttribute<TestingClassOWL, TestingClassOWL> object;"));
+            assertThat(actualResult, containsString("public static volatile ListAttribute<TestingClassOWL, String> dataList;"));
+            assertThat(actualResult, containsString("public static volatile SetAttribute<TestingClassOWL, String> dataSet;"));
+            assertThat(actualResult, containsString("public static volatile PropertiesSpecification<TestingClassOWL, Map, String, String> properties;"));
+        }
+
+        @Test
+        void containsClassIriField() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", false, false, false), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
             assertThat(actualResult, containsString("public static volatile IRI entityClassIRI;"));
         }
+    }
 
-        @Test
-        void containsIdentifier() {
-            assertThat(actualResult, containsString("public static volatile Identifier<TestingClassOWL, Test> uri;"));
+    @Nested
+    class GeneratedOutputWithPropertyIrisTest {
+
+        @AfterEach
+        void tearDown() throws IOException {
+            deleteTestFile(OUTPUT_FILE);
         }
 
         @Test
-        void containsSingular() {
-            assertThat(actualResult, containsString("public static volatile SingularAttribute<TestingClassOWL, Test> object;"));
+        void containsPropertyIris() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", true, false, false), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
+            assertThat(actualResult, containsString("public static volatile IRI objectPropertyIRI;"));
+            assertThat(actualResult, containsString("public static volatile IRI dataListPropertyIRI;"));
+            assertThat(actualResult, containsString("public static volatile IRI dataSetPropertyIRI;"));
+        }
+    }
+
+    @Nested
+    class GeneratedOutputWithIrisAsStringsTest {
+
+        @AfterEach
+        void tearDown() throws IOException {
+            deleteTestFile(OUTPUT_FILE);
         }
 
         @Test
-        void containsTypedProperties() {
-            assertThat(actualResult, containsString("public static volatile PropertiesSpecification<TestingClassOWL, Test> properties;"));
+        void containsIrisAsStrings() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", true, true, false), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
+            assertThat(actualResult, containsString("public static volatile String entityClassIRI;"));
+            assertThat(actualResult, containsString("public static volatile String objectPropertyIRI;"));
+            assertThat(actualResult, containsString("public static volatile String dataListPropertyIRI;"));
+            assertThat(actualResult, containsString("public static volatile String dataSetPropertyIRI;"));
+        }
+    }
+
+    @Nested
+    class GenerateOutputWithInitializedIriFieldsTest {
+
+        @AfterEach
+        void tearDown() throws IOException {
+            deleteTestFile(OUTPUT_FILE);
         }
 
         @Test
-        void containsListAttribute() {
-            assertThat(actualResult, containsString("public static volatile ListAttribute<TestingClassOWL, Test> dataList;"));
+        void containsClassIriFieldWithFinalStringValue() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", false, true, true), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
+            assertThat(actualResult, containsString("public static final String entityClassIRI = \"" + metamodelClass.getClassIri() + "\";"));
         }
 
         @Test
-        void containsSetAttribute() {
-            assertThat(actualResult, containsString("public static volatile SetAttribute<TestingClassOWL, Test> dataSet;"));
+        void containsClassIriFieldWithFinalIriValue() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", false, false, true), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
+            assertThat(actualResult, containsString("import cz.cvut.kbss.jopa.model.IRI;"));
+            assertThat(actualResult, containsString("public static final IRI entityClassIRI = IRI.create(\"" + metamodelClass.getClassIri() + "\");"));
+        }
+
+        @Test
+        void containsPropertyIriFieldsWithFinalStringValues() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", true, true, true), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
+            assertThat(actualResult, containsString("public static final String objectPropertyIRI = \"" + objectProperty.getPropertyIri() + "\";"));
+            assertThat(actualResult, containsString("public static final String dataListPropertyIRI = \"" + dataListProperty.getPropertyIri() + "\";"));
+            assertThat(actualResult, containsString("public static final String dataSetPropertyIRI = \"" + dataSetProperty.getPropertyIri() + "\";"));
+        }
+
+        @Test
+        void containsPropertyIriFieldsWithFinalIriValues() throws IOException {
+            new OutputFilesGenerator(new OutputConfig("./src/test/java", true, false, true), false, null).generateOutputFiles(List.of(metamodelClass));
+            String actualResult = readFileAsString(new File(OUTPUT_FILE));
+
+            assertThat(actualResult, containsString("import cz.cvut.kbss.jopa.model.IRI;"));
+            assertThat(actualResult, containsString("public static final IRI objectPropertyIRI = IRI.create(\"" + objectProperty.getPropertyIri() + "\");"));
+            assertThat(actualResult, containsString("public static final IRI dataListPropertyIRI = IRI.create(\"" + dataListProperty.getPropertyIri() + "\");"));
+            assertThat(actualResult, containsString("public static final IRI dataSetPropertyIRI = IRI.create(\"" + dataSetProperty.getPropertyIri() + "\");"));
         }
     }
 }

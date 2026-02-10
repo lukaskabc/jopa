@@ -26,12 +26,21 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
-import javax.tools.*;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static org.codehaus.plexus.util.StringUtils.isNotBlank;
 import static org.codehaus.plexus.util.StringUtils.join;
@@ -48,6 +57,9 @@ public class ModelGenMojo extends AbstractMojo {
     private static final String ADDITIONAL_SOURCES_PARAM = "additional-sources";
     private static final String SOURCE_PACKAGE_PARAM = "source-package";
     public static final String DEBUG_PARAM = "debug-option";
+    public static final String OUTPUT_PROPERTY_IRIS_PARAM = "output-property-iris";
+    public static final String OUTPUT_IRI_AS_STRING_PARAM = "output-iri-as-string";
+    public static final String INITIALIZE_IRIS_PARAM = "initialize-iris";
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -57,6 +69,12 @@ public class ModelGenMojo extends AbstractMojo {
     private String sourcePackage;
     @Parameter(name = DEBUG_PARAM, defaultValue = "false")
     private String debugOption;
+    @Parameter(name = OUTPUT_PROPERTY_IRIS_PARAM, defaultValue = "false")
+    private String outputPropertyIris;
+    @Parameter(name = OUTPUT_IRI_AS_STRING_PARAM, defaultValue = "false")
+    private String outputIriAsString;
+    @Parameter(name = INITIALIZE_IRIS_PARAM, defaultValue = "false")
+    private String initializeIris;
     @Parameter(name = ADDITIONAL_SOURCES_PARAM)
     private String additionalSources;
 
@@ -84,17 +102,7 @@ public class ModelGenMojo extends AbstractMojo {
         }
         options.add("./target/classes");
 
-        if (isNotBlank(outputDirectory)) {
-            options.add("-AoutputDirectory=" + outputDirectory);
-        }
-
-        if (isNotBlank(sourcePackage)) {
-            options.add("-AsourcePackage=" + sourcePackage);
-        }
-
-        if (isNotBlank(debugOption)) {
-            options.add("-AdebugOption=" + debugOption);
-        }
+        configureAnnotationProcessor(options);
 
         StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
 
@@ -115,6 +123,66 @@ public class ModelGenMojo extends AbstractMojo {
         logTaskDiagnostics(diagnosticCollector);
         getLog().info("Static metamodel generated.");
         getLog().info("------------------------------------------------------------------------");
+    }
+
+    private File[] getClassPathFiles() {
+        final Set<File> files = new TreeSet<>(getCurrentClassPath());
+        List<?> classpathElements;
+        try {
+            classpathElements = project.getTestClasspathElements();
+        } catch (DependencyResolutionRequiredException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+
+        for (final Object o : classpathElements) {
+            if (o != null) {
+                final File file = new File(o.toString());
+                if (file.canRead()) {
+                    files.add(file);
+                }
+            }
+        }
+
+        return files.toArray(new File[0]);
+    }
+
+    private List<File> getCurrentClassPath() {
+        final List<File> retVal = new ArrayList<>();
+        final URLClassLoader cl = (URLClassLoader) this.getClass().getClassLoader();
+        try {
+            for (URL url : cl.getURLs()) {
+                retVal.add(new File(url.toURI()));
+            }
+            return retVal;
+        } catch (URISyntaxException exc) {
+            throw new RuntimeException(exc.getMessage(), exc);
+        }
+    }
+
+    private void configureAnnotationProcessor(List<String> options) {
+        if (isNotBlank(outputDirectory)) {
+            options.add("-AoutputDirectory=" + outputDirectory);
+        }
+
+        if (isNotBlank(sourcePackage)) {
+            options.add("-AsourcePackage=" + sourcePackage);
+        }
+
+        if (isNotBlank(debugOption)) {
+            options.add("-AdebugOption=" + debugOption);
+        }
+
+        if (isNotBlank(outputPropertyIris)) {
+            options.add("-AoutputPropertyIris=" + outputPropertyIris);
+        }
+
+        if (isNotBlank(outputIriAsString)) {
+            options.add("-AoutputIriAsString=" + outputIriAsString);
+        }
+
+        if (isNotBlank(initializeIris)) {
+            options.add("-AinitializeIris=" + initializeIris);
+        }
     }
 
     private Set<File> getSourceDirectories() {
@@ -153,47 +221,17 @@ public class ModelGenMojo extends AbstractMojo {
             }
         }
         return resultList;
-
-    }
-
-    private File[] getClassPathFiles() {
-        final Set<File> files = new TreeSet<>(getCurrentClassPath());
-        List<?> classpathElements;
-        try {
-            classpathElements = project.getTestClasspathElements();
-        } catch (DependencyResolutionRequiredException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-
-        for (final Object o : classpathElements) {
-            if (o != null) {
-                final File file = new File(o.toString());
-                if (file.canRead()) {
-                    files.add(file);
-                }
-            }
-        }
-
-        return files.toArray(new File[0]);
-    }
-
-    private List<File> getCurrentClassPath() {
-        final List<File> retVal = new ArrayList<>();
-        final URLClassLoader cl = (URLClassLoader) this.getClass().getClassLoader();
-        try {
-            for (URL url : cl.getURLs()) {
-                retVal.add(new File(url.toURI()));
-            }
-            return retVal;
-        } catch (URISyntaxException exc) {
-            throw new RuntimeException(exc.getMessage(), exc);
-        }
     }
 
     private void logTaskDiagnostics(DiagnosticCollector<JavaFileObject> diagnosticCollector) {
         for (Diagnostic<? extends JavaFileObject> diagnostic : diagnosticCollector.getDiagnostics()) {
             switch (diagnostic.getKind()) {
                 case ERROR:
+                    if ("compiler.err.cant.resolve.location".equals(diagnostic.getCode())) {
+                        // Suppress "symbol not found" errors, they are likely due to static metamodel classes
+                        // (which were not generated when the compilation task was executed) referenced by source code
+                        break;
+                    }
                     getLog().error(diagnostic.getMessage(null));
                     break;
                 case WARNING:   // Intentional fall-through
@@ -213,5 +251,7 @@ public class ModelGenMojo extends AbstractMojo {
         Utils.logParameterValue(SOURCE_PACKAGE_PARAM, sourcePackage, getLog());
         Utils.logParameterValue(DEBUG_PARAM, debugOption, getLog());
         Utils.logParameterValue(ADDITIONAL_SOURCES_PARAM, additionalSources, getLog());
+        Utils.logParameterValue(OUTPUT_PROPERTY_IRIS_PARAM, outputPropertyIris, getLog());
+        Utils.logParameterValue(OUTPUT_IRI_AS_STRING_PARAM, outputIriAsString, getLog());
     }
 }
