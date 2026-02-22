@@ -207,7 +207,7 @@ deleteWhere
     ;
 
 modify
-    : (WITH iri)? (deleteClause insertClause? | insertClause) usingClause* WHERE groupGraphPattern
+    : (WITH varOrIRI)? (deleteClause insertClause? | insertClause) usingClause* WHERE groupGraphPattern
     ;
 
 deleteClause
@@ -219,7 +219,7 @@ insertClause
     ;
 
 usingClause
-    : USING NAMED? iri
+    : USING NAMED? varOrIRI
     ;
 
 graphOrVarOrDefault
