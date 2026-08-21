@@ -22,6 +22,7 @@ import cz.cvut.kbss.jopa.model.descriptors.Descriptor;
 import cz.cvut.kbss.jopa.model.descriptors.EntityDescriptor;
 import cz.cvut.kbss.jopa.model.query.TypedQuery;
 import cz.cvut.kbss.jopa.proxy.lazy.LazyLoadingProxy;
+import cz.cvut.kbss.jopa.query.QueryHints;
 import cz.cvut.kbss.jopa.test.OWLClassA;
 import cz.cvut.kbss.jopa.test.OWLClassAA;
 import cz.cvut.kbss.jopa.test.OWLClassB;
@@ -40,6 +41,8 @@ import cz.cvut.kbss.jopa.test.OWLClassWithQueryAttr2;
 import cz.cvut.kbss.jopa.test.OWLClassWithQueryAttr6;
 import cz.cvut.kbss.jopa.test.OWLClassWithQueryAttr7;
 import cz.cvut.kbss.jopa.test.OWLClassWithUrn;
+import cz.cvut.kbss.jopa.test.TermDto;
+import cz.cvut.kbss.jopa.test.TermInfo;
 import cz.cvut.kbss.jopa.test.Thing;
 import cz.cvut.kbss.jopa.test.Vocabulary;
 import cz.cvut.kbss.jopa.test.environment.DataAccessor;
@@ -47,6 +50,7 @@ import cz.cvut.kbss.jopa.test.environment.Generators;
 import cz.cvut.kbss.jopa.test.environment.PersistenceFactory;
 import cz.cvut.kbss.jopa.test.environment.Quad;
 import cz.cvut.kbss.jopa.vocabulary.RDF;
+import cz.cvut.kbss.jopa.vocabulary.SKOS;
 import cz.cvut.kbss.jopa.vocabulary.XSD;
 import cz.cvut.kbss.ontodriver.ReloadableDataSource;
 import cz.cvut.kbss.ontodriver.config.OntoDriverProperties;
@@ -780,5 +784,68 @@ public abstract class RetrieveOperationsRunner extends BaseRunner {
         this.em = getEntityManager("retrieveResourceToAnnotationPropertyObjectFieldLoadsUri", false);
         final URI value = Generators.generateUri();
         testLoadingAnnotationPropertyToObjectField(value);
+    }
+
+    @Test
+    void entityCanBeLoadedTwiceAsDifferentTypesWhenEntityManagerIsClearedWhenLoadingOptimizerIsDisabled() {
+        entityCanBeLoadedTwiceAsDifferentTypesWhenEntityManagerIsCleared(false);
+    }
+
+    @Test
+    void entityCanBeLoadedTwiceAsDifferentTypesWhenEntityManagerIsClearedWhenLoadingOptimizerIsEnabled() {
+        entityCanBeLoadedTwiceAsDifferentTypesWhenEntityManagerIsCleared(true);
+    }
+
+    void entityCanBeLoadedTwiceAsDifferentTypesWhenEntityManagerIsCleared(boolean enableEntityLoadingOptimizer) {
+        this.em = getEntityManager("entityCanBeLoadedTwiceAsDifferentTypesWhenEntityManagerIsCleared", false);
+
+        TermDto prvni = new TermDto();
+        prvni.setUri(Generators.generateUri());
+        prvni.setLabel("Prvni");
+
+        TermDto druhy = new TermDto();
+        druhy.setUri(Generators.generateUri());
+        druhy.setParentTerms(Set.of(prvni));
+        druhy.setLabel("Druhy");
+
+        TermDto ttt = new TermDto();
+        ttt.setUri(Generators.generateUri());
+        ttt.setParentTerms(Set.of(druhy));
+        ttt.setLabel("Ttt");
+
+        persist(ttt, druhy, prvni);
+
+        transactional(()-> {
+            TermDto prvniResult = em.find(TermDto.class, prvni.getUri());
+            assertEquals(prvni.getLabel(), prvniResult.getLabel());
+            assertTrue(prvniResult.getParentTerms().isEmpty(), "Root term must have no parents");
+            assertNull(prvniResult.getSubTerms(), "SubTerms are transient and must not be automatically loaded");
+
+            Set<TermInfo> prvniSubTerms = em.createNativeQuery("""
+                SELECT ?t WHERE {
+                    ?t a ?concept;
+                        ?broader ?prvni .
+                }
+                """, TermInfo.class)
+                    .setParameter("concept", URI.create(SKOS.CONCEPT))
+                    .setParameter("broader", URI.create(SKOS.BROADER))
+                    .setParameter("prvni", prvni.getUri())
+                    .setHint(QueryHints.ENABLE_ENTITY_LOADING_OPTIMIZER, enableEntityLoadingOptimizer)
+                    .getResultStream()
+                    .collect(Collectors.toSet());
+
+            assertEquals(1, prvniSubTerms.size(), "<prvni> must have exactly one subterm <druhy>");
+
+            // Now we want to load ttt and all its parents as TermDto
+            // because the <druhy> individual was already loaded, we are clearing entity manager
+            em.clear();
+
+            TermDto tttResult = em.find(TermDto.class, ttt.getUri());
+            TermDto druhyResult = tttResult.getParentTerms().iterator().next();
+
+            assertNotNull(druhyResult, "<ttt> must have parent <druhy>");
+            assertEquals(1, druhyResult.getParentTerms().size(), "<druhy> must have parent <prvni>");
+
+        });
     }
 }
